@@ -153,10 +153,10 @@ public class KurdostAIMainWindow : EditorWindow
 
         _buttonStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 14,
+            fontSize = 12,
             fontStyle = FontStyle.Bold,
-            padding = new RectOffset(16, 16, 12, 12),
-            fixedHeight = 42,
+            padding = new RectOffset(12, 12, 8, 8),
+            fixedHeight = 32,
             normal = { textColor = Color.white },
             hover = { textColor = Color.white },
             active = { textColor = new Color(0.9f, 0.95f, 1.0f, 1.0f) }
@@ -390,14 +390,7 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawGradientHeader()
     {
-        EditorGUILayout.Space(5);
-        
-        // Draw header with gradient colors
-        GUI.backgroundColor = GRADIENT_START;
-        EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(55));
-        GUI.backgroundColor = Color.white;
-        
-        EditorGUILayout.Space(5);
+        // Removed header text to save space
     }
 
     private void DrawTabs()
@@ -408,7 +401,7 @@ public class KurdostAIMainWindow : EditorWindow
             {
                 GUI.backgroundColor = _selectedTab == i ? TAB_ACTIVE : TAB_INACTIVE;
 
-                if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(40)))
+                if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(28)))
                 {
                     _selectedTab = i;
                 }
@@ -483,8 +476,8 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawChatTab()
     {
-        EditorGUILayout.LabelField("💬 Chat with AI", _labelStyle, GUILayout.Height(30));
-        EditorGUILayout.Space(12);
+        EditorGUILayout.LabelField("💬 Chat", _labelStyle ?? EditorStyles.label, GUILayout.Height(25));
+        EditorGUILayout.Space(8);
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle, GUILayout.ExpandHeight(true)))
         {
@@ -498,9 +491,9 @@ public class KurdostAIMainWindow : EditorWindow
                     
                     GUI.backgroundColor = new Color(0.0f, 0.7f, 1.0f, 0.2f);
                     EditorGUILayout.LabelField(
-                        "🚀 Start a conversation\n\nType your message below and press Enter to chat with Kurdost AI",
+                        "🚀 Start a conversation\n\nType your message below",
                         _messageStyle,
-                        GUILayout.Height(85)
+                        GUILayout.Height(60)
                     );
                     GUI.backgroundColor = Color.white;
                     
@@ -512,7 +505,7 @@ public class KurdostAIMainWindow : EditorWindow
                 foreach (var msg in _chatHistory)
                 {
                     DrawChatMessage(msg);
-                    EditorGUILayout.Space(10);
+                    EditorGUILayout.Space(8);
                 }
             }
 
@@ -528,22 +521,22 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawChatInputArea()
     {
-        EditorGUILayout.Space(15);
+        EditorGUILayout.Space(10);
 
-        EditorGUILayout.LabelField("✍️ Your Message:", _labelStyle);
-        EditorGUILayout.Space(8);
+        EditorGUILayout.LabelField("✍️ Message:", _labelStyle ?? EditorStyles.label);
+        EditorGUILayout.Space(5);
         
         GUI.backgroundColor = INPUT_BG;
-        _userMessage = GUILayout.TextArea(_userMessage, GUILayout.Height(100));
+        _userMessage = GUILayout.TextArea(_userMessage, GUILayout.Height(70));
         GUI.backgroundColor = Color.white;
 
-        EditorGUILayout.Space(15);
+        EditorGUILayout.Space(10);
 
         using (new EditorGUILayout.HorizontalScope())
         {
             // Send button with cyan color
             GUI.backgroundColor = new Color(0.0f, 0.85f, 1.0f, 0.9f);
-            if (GUILayout.Button(new GUIContent("🚀 Send Message", "Send message (Enter)"), _buttonStyle))
+            if (GUILayout.Button(new GUIContent("🚀 Send", "Send message (Enter)"), _buttonStyle))
             {
                 if (!string.IsNullOrEmpty(_userMessage))
                 {
@@ -554,7 +547,7 @@ public class KurdostAIMainWindow : EditorWindow
 
             // Export button with purple
             GUI.backgroundColor = ACCENT_PURPLE;
-            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat history (Ctrl+E)"), _buttonStyle))
+            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat (Ctrl+E)"), _buttonStyle))
             {
                 ExportChatHistory();
             }
@@ -574,7 +567,7 @@ public class KurdostAIMainWindow : EditorWindow
             GUI.backgroundColor = Color.white;
         }
 
-        EditorGUILayout.Space(12);
+        EditorGUILayout.Space(8);
     }
 
     private void DrawLoadingIndicator()
