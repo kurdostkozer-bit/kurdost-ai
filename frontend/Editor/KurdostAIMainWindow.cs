@@ -17,6 +17,7 @@ public class KurdostAIMainWindow : EditorWindow
     private bool _autoScroll = true;
     private bool _isLoading = false;
     private int _loadingFrame = 0;
+    private float _animationProgress = 0f;
     private string[] _languages = { "English", "Arabic" };
     private int _selectedLanguage = 0;
     private string[] _themes = { "Dark", "Light" };
@@ -25,20 +26,32 @@ public class KurdostAIMainWindow : EditorWindow
     private float _notificationDisplayTime = 3f;
     private float _notificationTimer = 0f;
 
-    // Colors
-    private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
-    private static readonly Color TAB_ACTIVE = new Color(0.2f, 0.6f, 1.0f, 1.0f);
-    private static readonly Color TAB_INACTIVE = new Color(0.2f, 0.2f, 0.2f, 1.0f);
-    private static readonly Color SECTION_BG = new Color(0.15f, 0.15f, 0.15f, 1.0f);
-    private static readonly Color INPUT_BG = new Color(0.1f, 0.1f, 0.1f, 1.0f);
-    private static readonly Color SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.3f, 1.0f);
-    private static readonly Color ERROR_COLOR = new Color(1.0f, 0.3f, 0.3f, 1.0f);
+    // Colors - Modern Gradient Theme
+    private static readonly Color HEADER_COLOR = new Color(0.1f, 0.5f, 0.9f, 1.0f);
+    private static readonly Color HEADER_COLOR_END = new Color(0.4f, 0.2f, 0.8f, 1.0f);
+    private static readonly Color TAB_ACTIVE = new Color(0.1f, 0.5f, 0.9f, 1.0f);
+    private static readonly Color TAB_INACTIVE = new Color(0.3f, 0.3f, 0.35f, 1.0f);
+    private static readonly Color SECTION_BG = new Color(0.12f, 0.12f, 0.15f, 1.0f);
+    private static readonly Color INPUT_BG = new Color(0.08f, 0.08f, 0.1f, 1.0f);
+    private static readonly Color SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.4f, 1.0f);
+    private static readonly Color ERROR_COLOR = new Color(0.95f, 0.3f, 0.3f, 1.0f);
+    private static readonly Color WARNING_COLOR = new Color(0.95f, 0.7f, 0.2f, 1.0f);
+    private static readonly Color INFO_COLOR = new Color(0.2f, 0.6f, 0.95f, 1.0f);
+    private static readonly Color USER_MESSAGE_BG = new Color(0.15f, 0.45f, 0.85f, 0.25f);
+    private static readonly Color AI_MESSAGE_BG = new Color(0.18f, 0.18f, 0.22f, 0.5f);
+    private static readonly Color ERROR_MESSAGE_BG = new Color(0.8f, 0.15f, 0.15f, 0.3f);
 
     // Styles
     private GUIStyle _headerStyle;
     private GUIStyle _tabStyle;
     private GUIStyle _sectionStyle;
     private GUIStyle _buttonStyle;
+    private GUIStyle _messageStyle;
+    private GUIStyle _userMessageStyle;
+    private GUIStyle _aiMessageStyle;
+    private GUIStyle _errorMessageStyle;
+    private GUIStyle _inputStyle;
+    private GUIStyle _labelStyle;
 
     private string[] _tabNames = { "💬 Chat", "🔧 Tools", "⚙️ Settings" };
     private UnityWebRequest _currentRequest;
@@ -61,32 +74,92 @@ public class KurdostAIMainWindow : EditorWindow
     {
         _headerStyle = new GUIStyle(EditorStyles.boldLabel)
         {
-            fontSize = 18,
+            fontSize = 20,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter,
-            padding = new RectOffset(10, 10, 15, 15),
+            padding = new RectOffset(10, 10, 18, 18),
+            normal = { textColor = Color.white },
+            hover = { textColor = Color.white }
         };
 
         _tabStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 11,
-            padding = new RectOffset(15, 15, 8, 8),
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            padding = new RectOffset(18, 18, 10, 10),
             margin = new RectOffset(2, 2, 2, 2),
+            normal = { textColor = Color.white },
+            hover = { textColor = Color.white }
         };
 
         _sectionStyle = new GUIStyle(GUI.skin.box)
         {
-            padding = new RectOffset(12, 12, 12, 12),
-            margin = new RectOffset(5, 5, 5, 5),
+            padding = new RectOffset(16, 16, 16, 16),
+            margin = new RectOffset(8, 8, 8, 8),
+            normal = { background = MakeTexture(2, 2, SECTION_BG) }
         };
 
         _buttonStyle = new GUIStyle(GUI.skin.button)
         {
+            fontSize = 13,
+            fontStyle = FontStyle.Bold,
+            padding = new RectOffset(14, 14, 10, 10),
+            fixedHeight = 38,
+            normal = { textColor = Color.white },
+            hover = { textColor = Color.white }
+        };
+
+        _messageStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
+        {
+            fontSize = 13,
+            padding = new RectOffset(16, 16, 12, 12),
+            wordWrap = true,
+            richText = true
+        };
+
+        _userMessageStyle = new GUIStyle(_messageStyle)
+        {
+            normal = { background = MakeTexture(2, 2, USER_MESSAGE_BG) }
+        };
+
+        _aiMessageStyle = new GUIStyle(_messageStyle)
+        {
+            normal = { background = MakeTexture(2, 2, AI_MESSAGE_BG) }
+        };
+
+        _errorMessageStyle = new GUIStyle(_messageStyle)
+        {
+            normal = { background = MakeTexture(2, 2, ERROR_MESSAGE_BG) }
+        };
+
+        _inputStyle = new GUIStyle(EditorStyles.textArea)
+        {
+            fontSize = 13,
+            padding = new RectOffset(12, 12, 10, 10),
+            wordWrap = true,
+            richText = true
+        };
+
+        _labelStyle = new GUIStyle(EditorStyles.label)
+        {
             fontSize = 12,
             fontStyle = FontStyle.Bold,
-            padding = new RectOffset(10, 10, 8, 8),
-            fixedHeight = 35,
+            padding = new RectOffset(0, 0, 4, 4)
         };
+    }
+
+    private Texture2D MakeTexture(int width, int height, Color color)
+    {
+        Color[] pixels = new Color[width * height];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            pixels[i] = color;
+        }
+
+        Texture2D texture = new Texture2D(width, height);
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
     }
 
     private void OnGUI()
@@ -117,10 +190,8 @@ public class KurdostAIMainWindow : EditorWindow
             return;
         }
 
-        // Header
-        GUI.backgroundColor = HEADER_COLOR;
-        EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(35));
-        GUI.backgroundColor = Color.white;
+        // Header with gradient effect
+        DrawGradientHeader();
 
         EditorGUILayout.Space(10);
 
@@ -227,6 +298,34 @@ public class KurdostAIMainWindow : EditorWindow
         }
     }
 
+    private void DrawGradientHeader()
+    {
+        Rect headerRect = EditorGUILayout.GetControlRect(false, 50);
+        GUI.DrawTexture(headerRect, CreateGradientTexture(headerRect.width, headerRect.height, HEADER_COLOR, HEADER_COLOR_END));
+        GUI.Label(headerRect, "🤖 Kurdost AI Assistant", _headerStyle);
+    }
+
+    private Texture2D CreateGradientTexture(int width, int height, Color color1, Color color2)
+    {
+        Texture2D texture = new Texture2D(width, height);
+        Color[] colors = new Color[width * height];
+
+        for (int y = 0; y < height; y++)
+        {
+            float t = (float)y / height;
+            Color lerpedColor = Color.Lerp(color1, color2, t);
+
+            for (int x = 0; x < width; x++)
+            {
+                colors[y * width + x] = lerpedColor;
+            }
+        }
+
+        texture.SetPixels(colors);
+        texture.Apply();
+        return texture;
+    }
+
     private void DrawTabs()
     {
         using (new EditorGUILayout.HorizontalScope())
@@ -300,8 +399,8 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawChatTab()
     {
-        EditorGUILayout.LabelField("Chat with AI", EditorStyles.boldLabel, GUILayout.Height(25));
-        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("💬 Chat with AI", _labelStyle, GUILayout.Height(30));
+        EditorGUILayout.Space(12);
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle, GUILayout.ExpandHeight(true)))
         {
@@ -309,20 +408,27 @@ public class KurdostAIMainWindow : EditorWindow
 
             if (_chatHistory.Count == 0)
             {
-                GUI.backgroundColor = new Color(0.3f, 0.3f, 0.3f);
-                EditorGUILayout.LabelField(
-                    "Start a conversation\n\nType your message below and press Send to chat with Kurdost AI",
-                    EditorStyles.helpBox,
-                    GUILayout.Height(60)
-                );
-                GUI.backgroundColor = Color.white;
+                using (new EditorGUILayout.VerticalScope())
+                {
+                    GUILayout.FlexibleSpace();
+                    
+                    GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.15f);
+                    EditorGUILayout.LabelField(
+                        "🚀 Start a conversation\n\nType your message below and press Enter to chat with Kurdost AI",
+                        _messageStyle,
+                        GUILayout.Height(80)
+                    );
+                    GUI.backgroundColor = Color.white;
+                    
+                    GUILayout.FlexibleSpace();
+                }
             }
             else
             {
                 foreach (var msg in _chatHistory)
                 {
                     DrawChatMessage(msg);
-                    EditorGUILayout.Space(5);
+                    EditorGUILayout.Space(8);
                 }
             }
 
@@ -335,18 +441,18 @@ public class KurdostAIMainWindow : EditorWindow
             EditorGUILayout.EndScrollView();
         }
 
-        EditorGUILayout.Space(10);
+        EditorGUILayout.Space(12);
 
-        EditorGUILayout.LabelField("Your Message:", EditorStyles.label);
+        EditorGUILayout.LabelField("✍️ Your Message:", _labelStyle);
         GUI.backgroundColor = INPUT_BG;
-        _userMessage = EditorGUILayout.TextArea(_userMessage, GUILayout.Height(70));
+        _userMessage = EditorGUILayout.TextArea(_userMessage, _inputStyle, GUILayout.Height(85));
         GUI.backgroundColor = Color.white;
 
-        EditorGUILayout.Space(10);
+        EditorGUILayout.Space(12);
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button(new GUIContent("🚀 Send Message", "Send message (Ctrl+Enter)"), _buttonStyle))
+            if (GUILayout.Button(new GUIContent("🚀 Send Message", "Send message (Enter)"), _buttonStyle))
             {
                 if (!string.IsNullOrEmpty(_userMessage))
                 {
@@ -354,17 +460,18 @@ public class KurdostAIMainWindow : EditorWindow
                 }
             }
 
-            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat history (Ctrl+E)"), GUILayout.Height(35)))
+            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat history (Ctrl+E)"), _buttonStyle))
             {
                 ExportChatHistory();
             }
 
-            if (GUILayout.Button(new GUIContent("Clear", "Clear chat (Ctrl+N)"), GUILayout.Height(35)))
+            if (GUILayout.Button(new GUIContent("🗑️ Clear", "Clear chat (Ctrl+N)"), _buttonStyle))
             {
                 if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
                 {
                     _userMessage = "";
                     _chatHistory.Clear();
+                    ShowNotification("Chat cleared", NotificationType.Info);
                 }
             }
         }
@@ -376,41 +483,51 @@ public class KurdostAIMainWindow : EditorWindow
         {
             GUILayout.FlexibleSpace();
 
+            // Animated loading dots with smooth transition
+            float animationSpeed = 0.05f;
+            _animationProgress += animationSpeed;
+            if (_animationProgress > 1f)
+                _animationProgress = 0f;
+
             string[] dots = { ".", "..", "...", "...." };
-            int dotIndex = (_loadingFrame / 10) % dots.Length;
+            int dotIndex = (int)(_animationProgress * dots.Length * 2) % dots.Length;
             string loadingText = "Loading" + dots[dotIndex];
 
-            GUI.backgroundColor = new Color(0.2f, 0.6f, 1.0f, 0.5f);
-            EditorGUILayout.LabelField(loadingText, EditorStyles.boldLabel, GUILayout.Width(100));
+            // Pulsing color effect
+            float pulse = Mathf.Sin(_animationProgress * Mathf.PI * 2) * 0.3f + 0.7f;
+            Color pulsingColor = new Color(0.2f, 0.6f, 1.0f, pulse);
+
+            GUI.backgroundColor = pulsingColor;
+            EditorGUILayout.LabelField(loadingText, _headerStyle, GUILayout.Width(120));
             GUI.backgroundColor = Color.white;
 
             GUILayout.FlexibleSpace();
         }
 
-        EditorGUILayout.Space(10);
+        EditorGUILayout.Space(12);
     }
 
     private void DrawChatMessage(ChatMessage msg)
     {
         using (new EditorGUILayout.VerticalScope())
         {
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(8);
 
             // Header with timestamp and action buttons
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (msg.IsUser)
                 {
-                    EditorGUILayout.LabelField("👤 You", EditorStyles.boldLabel, GUILayout.Width(50));
+                    EditorGUILayout.LabelField("👤 You", _labelStyle, GUILayout.Width(60));
                 }
                 else
                 {
-                    EditorGUILayout.LabelField(msg.IsError ? "❌ Error" : "🤖 AI", EditorStyles.boldLabel, GUILayout.Width(50));
+                    EditorGUILayout.LabelField(msg.IsError ? "❌ Error" : "🤖 AI", _labelStyle, GUILayout.Width(60));
                 }
 
                 if (!string.IsNullOrEmpty(msg.Timestamp))
                 {
-                    EditorGUILayout.LabelField(msg.Timestamp, EditorStyles.miniLabel, GUILayout.Width(50));
+                    EditorGUILayout.LabelField(msg.Timestamp, EditorStyles.miniLabel, GUILayout.Width(60));
                 }
 
                 GUILayout.FlexibleSpace();
@@ -418,7 +535,7 @@ public class KurdostAIMainWindow : EditorWindow
                 // Retry button for error messages
                 if (msg.IsError && !string.IsNullOrEmpty(msg.OriginalMessage))
                 {
-                    if (GUILayout.Button("🔄", GUILayout.Width(25), GUILayout.Height(20)))
+                    if (GUILayout.Button("🔄", GUILayout.Width(28), GUILayout.Height(24)))
                     {
                         RetryMessage(msg.OriginalMessage);
                         return;
@@ -426,14 +543,14 @@ public class KurdostAIMainWindow : EditorWindow
                 }
 
                 // Copy button
-                if (GUILayout.Button("📋", GUILayout.Width(25), GUILayout.Height(20)))
+                if (GUILayout.Button("📋", GUILayout.Width(28), GUILayout.Height(24)))
                 {
                     GUIUtility.systemCopyBuffer = msg.Content;
                     ShowNotification("Message copied to clipboard", NotificationType.Success);
                 }
 
                 // Delete button
-                if (GUILayout.Button("🗑️", GUILayout.Width(25), GUILayout.Height(20)))
+                if (GUILayout.Button("🗑️", GUILayout.Width(28), GUILayout.Height(24)))
                 {
                     _chatHistory.Remove(msg);
                     ShowNotification("Message deleted", NotificationType.Info);
@@ -442,24 +559,29 @@ public class KurdostAIMainWindow : EditorWindow
                 }
             }
 
-            // Message content with markdown support
+            // Message content with word wrap and proper styling
+            GUIStyle messageStyle;
             if (msg.IsUser)
             {
-                GUI.backgroundColor = new Color(0.2f, 0.5f, 0.8f, 0.3f);
+                messageStyle = _userMessageStyle;
             }
             else if (msg.IsError)
             {
-                GUI.backgroundColor = new Color(1.0f, 0.3f, 0.3f, 0.3f);
+                messageStyle = _errorMessageStyle;
             }
             else
             {
-                GUI.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
+                messageStyle = _aiMessageStyle;
             }
 
             // Parse and display markdown for AI messages
             string displayContent = msg.IsUser ? msg.Content : ParseMarkdown(msg.Content);
-            EditorGUILayout.TextArea(displayContent, EditorStyles.helpBox, GUILayout.MinHeight(40));
-            GUI.backgroundColor = Color.white;
+            
+            // Calculate required height for the message
+            float contentHeight = messageStyle.CalcHeight(new GUIContent(displayContent), position.width - 80);
+            float minHeight = Mathf.Max(40, contentHeight);
+            
+            EditorGUILayout.LabelField(displayContent, messageStyle, GUILayout.Height(minHeight));
         }
     }
 
@@ -704,34 +826,38 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawToolsTab()
     {
-        EditorGUILayout.LabelField("Analysis Tools", EditorStyles.boldLabel, GUILayout.Height(20));
+        EditorGUILayout.LabelField("🔧 Analysis Tools", _labelStyle, GUILayout.Height(30));
+        EditorGUILayout.Space(12);
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle))
         {
-            EditorGUILayout.LabelField("Quick Actions:", EditorStyles.boldLabel);
-            EditorGUILayout.Space(10);
+            EditorGUILayout.LabelField("⚡ Quick Actions:", _labelStyle);
+            EditorGUILayout.Space(12);
 
             if (GUILayout.Button(new GUIContent("📝 Analyze Selected Script", "Analyze the selected C# script for code quality and improvements"), _buttonStyle))
             {
                 AnalyzeSelectedScript();
             }
 
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(8);
 
             if (GUILayout.Button(new GUIContent("🐛 Fix Console Errors", "Analyze and provide fixes for console errors"), _buttonStyle))
             {
                 FixConsoleErrors();
             }
 
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(8);
 
             if (GUILayout.Button(new GUIContent("✨ Generate Script", "Generate a new Unity script with AI assistance"), _buttonStyle))
             {
                 GenerateScript();
             }
 
-            EditorGUILayout.Space(15);
-            EditorGUILayout.HelpBox("Select a script in Project view to analyze it", MessageType.Info);
+            EditorGUILayout.Space(16);
+            
+            GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.15f);
+            EditorGUILayout.HelpBox("💡 Tip: Select a script in the Project view to analyze it", MessageType.Info);
+            GUI.backgroundColor = Color.white;
         }
     }
 
@@ -866,11 +992,13 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
 
     private void DrawSettingsTab()
     {
-        EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel, GUILayout.Height(20));
+        EditorGUILayout.LabelField("⚙️ Settings", _labelStyle, GUILayout.Height(30));
+        EditorGUILayout.Space(12);
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle))
         {
-            EditorGUILayout.LabelField("API Configuration", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🔑 API Configuration", _labelStyle);
+            EditorGUILayout.Space(8);
 
             bool hasKey = EditorPrefs.HasKey("KurdostAI_ApiKey");
             GUI.backgroundColor = hasKey ? SUCCESS_COLOR : ERROR_COLOR;
@@ -880,10 +1008,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             );
             GUI.backgroundColor = Color.white;
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
             // Provider Selection
-            EditorGUILayout.LabelField("Provider", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🌐 Provider", _labelStyle);
             string[] providers = { "groq", "gemini" };
             int currentProviderIndex = Array.IndexOf(providers, EditorPrefs.GetString("KurdostAI_Provider", "groq"));
             int newProviderIndex = EditorGUILayout.Popup(currentProviderIndex, providers);
@@ -897,10 +1025,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                 }
             }
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space(12);
 
             // Model Selection
-            EditorGUILayout.LabelField("Model", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🤖 Model", _labelStyle);
             string[] models = { "llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768" };
             int currentModelIndex = Array.IndexOf(models, EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant"));
             int newModelIndex = EditorGUILayout.Popup(currentModelIndex, models);
@@ -914,10 +1042,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                 }
             }
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space(12);
 
             // Temperature Control
-            EditorGUILayout.LabelField("Temperature", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🌡️ Temperature", _labelStyle);
             float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
             float newTemperature = EditorGUILayout.Slider(temperature, 0.0f, 2.0f);
             if (Mathf.Abs(newTemperature - temperature) > 0.01f)
@@ -926,10 +1054,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             }
             EditorGUILayout.LabelField($"Value: {newTemperature:F2}", EditorStyles.miniLabel);
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space(12);
 
             // Max Tokens Control
-            EditorGUILayout.LabelField("Max Tokens", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("📊 Max Tokens", _labelStyle);
             int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
             int newMaxTokens = EditorGUILayout.IntSlider(maxTokens, 100, 4000);
             if (newMaxTokens != maxTokens)
@@ -938,10 +1066,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             }
             EditorGUILayout.LabelField($"Value: {newMaxTokens}", EditorStyles.miniLabel);
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
             // Custom Server URL
-            EditorGUILayout.LabelField("Server URL", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🌍 Server URL", _labelStyle);
             string serverUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
             string newServerUrl = EditorGUILayout.TextField(serverUrl);
             if (newServerUrl != serverUrl)
@@ -949,10 +1077,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                 EditorPrefs.SetString("KurdostAI_ServerUrl", newServerUrl);
             }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
             // Server Status
-            EditorGUILayout.LabelField("Server Status", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("📡 Server Status", _labelStyle);
             bool isConnected = CheckServerConnection();
             GUI.backgroundColor = isConnected ? SUCCESS_COLOR : ERROR_COLOR;
             EditorGUILayout.LabelField(
@@ -961,10 +1089,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             );
             GUI.backgroundColor = Color.white;
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
             // Language Preference
-            EditorGUILayout.LabelField("Language", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🌐 Language", _labelStyle);
             _selectedLanguage = EditorPrefs.GetInt("KurdostAI_Language", 0);
             int newLanguage = EditorGUILayout.Popup(_selectedLanguage, _languages);
             if (newLanguage != _selectedLanguage)
@@ -974,10 +1102,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                 Repaint();
             }
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space(12);
 
             // Theme Selection
-            EditorGUILayout.LabelField("Theme", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🎨 Theme", _labelStyle);
             _selectedTheme = EditorPrefs.GetInt("KurdostAI_Theme", 0);
             int newTheme = EditorGUILayout.Popup(_selectedTheme, _themes);
             if (newTheme != _selectedTheme)
@@ -988,50 +1116,51 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                 Repaint();
             }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
-            EditorGUILayout.LabelField("Change API Key", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🔐 Change API Key", _labelStyle);
             _settingsApiKeyInput = EditorGUILayout.PasswordField(_settingsApiKeyInput);
 
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Save New Key", GUILayout.Height(30)))
+                if (GUILayout.Button(new GUIContent("💾 Save New Key", "Save your new API key"), _buttonStyle))
                 {
                     if (!string.IsNullOrEmpty(_settingsApiKeyInput))
                     {
                         EditorPrefs.SetString("KurdostAI_ApiKey", _settingsApiKeyInput);
                         _settingsApiKeyInput = "";
-                        EditorUtility.DisplayDialog("Success", "API Key updated successfully!", "OK");
+                        EditorUtility.DisplayDialog("✅ Success", "API Key updated successfully!", "OK");
                         ShowNotification("API Key updated successfully", NotificationType.Success);
                         Repaint();
                     }
                     else
                     {
-                        EditorUtility.DisplayDialog("Error", "Please enter an API key", "OK");
+                        EditorUtility.DisplayDialog("❌ Error", "Please enter an API key", "OK");
                     }
                 }
 
-                if (GUILayout.Button("Logout", GUILayout.Height(30)))
+                if (GUILayout.Button(new GUIContent("🚪 Logout", "Remove API key and logout"), _buttonStyle))
                 {
                     if (EditorUtility.DisplayDialog("Logout", "Remove API key?", "Yes", "No"))
                     {
                         EditorPrefs.DeleteKey("KurdostAI_ApiKey");
                         _chatHistory.Clear();
+                        ShowNotification("Logged out successfully", NotificationType.Info);
                         Repaint();
                     }
                 }
             }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(16);
 
-            if (GUILayout.Button("🔗 Open Groq Console", GUILayout.Height(30)))
+            if (GUILayout.Button(new GUIContent("🔗 Open Groq Console", "Get your API key from Groq Console"), _buttonStyle))
             {
                 Application.OpenURL("https://console.groq.com/keys");
             }
 
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(8);
 
-            if (GUILayout.Button("📂 Open Repository", GUILayout.Height(30)))
+            if (GUILayout.Button(new GUIContent("📂 Open Repository", "View the project on GitHub"), _buttonStyle))
             {
                 Application.OpenURL("https://github.com/kurdostkozer-bit/kurdost-ai");
             }
