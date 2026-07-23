@@ -979,6 +979,15 @@ public class KurdostAIMainWindow : EditorWindow
             }
             GUI.backgroundColor = Color.white;
 
+            EditorGUILayout.Space(10);
+
+            GUI.backgroundColor = new Color(0.6f, 0.3f, 1.0f, 0.9f);
+            if (GUILayout.Button(new GUIContent("📂 Analyze Project", "Analyze the entire Unity project structure and files"), _buttonStyle))
+            {
+                AnalyzeProject();
+            }
+            GUI.backgroundColor = Color.white;
+
             EditorGUILayout.Space(16);
             
             GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.25f);
@@ -1017,6 +1026,101 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         string analysisPrompt = $"Analyze this C# script for Unity:\n\n{scriptContent}\n\nProvide feedback on code quality, potential issues, and suggestions for improvement.";
 
         _chatHistory.Add(new ChatMessage { Content = "Loading analysis...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = analysisPrompt });
+
+        _isLoading = true;
+        _loadingFrame = 0;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
+
+        Repaint();
+
+        SendToBackendCoroutine(analysisPrompt);
+    }
+
+    private void AnalyzeProject()
+    {
+        _chatHistory.Add(new ChatMessage { Content = "Analyzing Unity project structure...", IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+
+        System.Text.StringBuilder projectInfo = new System.Text.StringBuilder();
+        projectInfo.AppendLine("Unity Project Analysis:");
+        projectInfo.AppendLine($"Project Name: {Application.productName}");
+        projectInfo.AppendLine($"Project Path: {Application.dataPath}");
+        projectInfo.AppendLine($"Unity Version: {Application.unityVersion}");
+        projectInfo.AppendLine();
+
+        // Get all C# scripts
+        string[] scriptFiles = System.IO.Directory.GetFiles(Application.dataPath, "*.cs", System.IO.SearchOption.AllDirectories);
+        projectInfo.AppendLine($"Total C# Scripts: {scriptFiles.Length}");
+        projectInfo.AppendLine();
+
+        // List script files (limit to first 20 to avoid token limit)
+        projectInfo.AppendLine("Script Files:");
+        int scriptCount = 0;
+        foreach (string script in scriptFiles)
+        {
+            if (scriptCount < 20)
+            {
+                string relativePath = script.Replace(Application.dataPath, "Assets");
+                projectInfo.AppendLine($"- {relativePath}");
+                scriptCount++;
+            }
+        }
+
+        if (scriptFiles.Length > 20)
+        {
+            projectInfo.AppendLine($"... and {scriptFiles.Length - 20} more scripts");
+        }
+
+        projectInfo.AppendLine();
+
+        // Get folder structure
+        string[] folders = System.IO.Directory.GetDirectories(Application.dataPath, "*", System.IO.SearchOption.TopDirectoryOnly);
+        projectInfo.AppendLine("Top-level Folders:");
+        foreach (string folder in folders)
+        {
+            string folderName = System.IO.Path.GetFileName(folder);
+            projectInfo.AppendLine($"- {folderName}");
+        }
+
+        projectInfo.AppendLine();
+
+        // Read content of a few key scripts
+        projectInfo.AppendLine("Sample Script Contents (first 3 scripts):");
+        int contentCount = 0;
+        foreach (string script in scriptFiles)
+        {
+            if (contentCount < 3)
+            {
+                try
+                {
+                    string content = System.IO.File.ReadAllText(script);
+                    string relativePath = script.Replace(Application.dataPath, "Assets");
+                    projectInfo.AppendLine($"\n--- {relativePath} ---");
+                    
+                    // Limit content length
+                    if (content.Length > 2000)
+                    {
+                        projectInfo.AppendLine(content.Substring(0, 2000) + "\n... (truncated)");
+                    }
+                    else
+                    {
+                        projectInfo.AppendLine(content);
+                    }
+                    contentCount++;
+                }
+                catch (System.Exception ex)
+                {
+                    projectInfo.AppendLine($"Error reading {script}: {ex.Message}");
+                }
+            }
+        }
+
+        string analysisPrompt = $"Analyze this Unity project:\n\n{projectInfo.ToString()}\n\nProvide feedback on project structure, potential issues, and suggestions for improvement.";
+
+        _chatHistory.Add(new ChatMessage { Content = "Loading project analysis...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = analysisPrompt });
 
         _isLoading = true;
         _loadingFrame = 0;
