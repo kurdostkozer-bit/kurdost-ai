@@ -300,30 +300,12 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawGradientHeader()
     {
-        Rect headerRect = EditorGUILayout.GetControlRect(false, 50);
-        GUI.DrawTexture(headerRect, CreateGradientTexture((int)headerRect.width, (int)headerRect.height, HEADER_COLOR, HEADER_COLOR_END));
-        GUI.Label(headerRect, "🤖 Kurdost AI Assistant", _headerStyle);
-    }
-
-    private Texture2D CreateGradientTexture(int width, int height, Color color1, Color color2)
-    {
-        Texture2D texture = new Texture2D(width, height);
-        Color[] colors = new Color[width * height];
-
-        for (int y = 0; y < height; y++)
+        using (new EditorGUILayout.HorizontalScope())
         {
-            float t = (float)y / height;
-            Color lerpedColor = Color.Lerp(color1, color2, t);
-
-            for (int x = 0; x < width; x++)
-            {
-                colors[y * width + x] = lerpedColor;
-            }
+            GUI.backgroundColor = HEADER_COLOR;
+            EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(40));
+            GUI.backgroundColor = Color.white;
         }
-
-        texture.SetPixels(colors);
-        texture.Apply();
-        return texture;
     }
 
     private void DrawTabs()
