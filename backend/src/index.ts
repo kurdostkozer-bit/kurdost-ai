@@ -44,7 +44,7 @@ app.get('/providers', (req: Request, res: Response) => {
 
 app.post('/api/v1/chat', async (req: Request, res: Response) => {
   try {
-    const { provider, messages } = req.body;
+    const { provider, messages, model, temperature, max_tokens } = req.body;
     const apiKey = req.headers['x-api-key'] as string;
 
     if (!provider) {
@@ -70,12 +70,17 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     // Temporarily override the provider's API key with the one from request
     const tempToolkit = new AIToolkit();
     if (provider === 'groq') {
-      tempToolkit.registerProvider('groq', new GroqProvider({ apiKey: effectiveApiKey }));
+      tempToolkit.registerProvider('groq', new GroqProvider({
+        apiKey: effectiveApiKey,
+        model: model || 'llama-3.1-8b-instant',
+        temperature: temperature || 0.7,
+        maxTokens: max_tokens || 1000
+      }));
     } else if (provider === 'gemini') {
       tempToolkit.registerProvider('gemini', new GeminiProvider({ apiKey: effectiveApiKey }));
     }
 
-    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, apiKeySource=${apiKey ? 'header' : 'env'}`);
+    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}, apiKeySource=${apiKey ? 'header' : 'env'}`);
 
     const response = await tempToolkit.sendMessage(provider, messages);
 
@@ -87,6 +92,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('❌ Chat error:', error.message);
+    console.error('❌ Error details:', error);
     res.status(500).json({
       success: false,
       error: error.message,
