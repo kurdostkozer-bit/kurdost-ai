@@ -301,7 +301,7 @@ public class KurdostAIMainWindow : EditorWindow
     private void DrawGradientHeader()
     {
         Rect headerRect = EditorGUILayout.GetControlRect(false, 50);
-        GUI.DrawTexture(headerRect, CreateGradientTexture(headerRect.width, headerRect.height, HEADER_COLOR, HEADER_COLOR_END));
+        GUI.DrawTexture(headerRect, CreateGradientTexture((int)headerRect.width, (int)headerRect.height, HEADER_COLOR, HEADER_COLOR_END));
         GUI.Label(headerRect, "🤖 Kurdost AI Assistant", _headerStyle);
     }
 
