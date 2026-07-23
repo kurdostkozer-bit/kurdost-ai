@@ -98,7 +98,7 @@ public class KurdostAIMainWindow : EditorWindow
     private GUIStyle _inputStyle;
     private GUIStyle _labelStyle;
 
-    private string[] _tabNames = { "💬 Chat", "🔧 Tools", "⚙️ Settings" };
+    private string[] _tabNames = { "💬 Chat", "⚙️ Settings" };
     private UnityWebRequest _currentRequest;
     private System.DateTime _requestStartTime;
     private const float REQUEST_TIMEOUT = 30f;
@@ -293,9 +293,6 @@ public class KurdostAIMainWindow : EditorWindow
                 DrawChatTab();
                 break;
             case 1:
-                DrawToolsTab();
-                break;
-            case 2:
                 DrawSettingsTab();
                 break;
         }
@@ -530,42 +527,9 @@ public class KurdostAIMainWindow : EditorWindow
         _userMessage = GUILayout.TextArea(_userMessage, GUILayout.Height(70));
         GUI.backgroundColor = Color.white;
 
-        EditorGUILayout.Space(10);
+        EditorGUILayout.Space(5);
 
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            // Send button with cyan color
-            GUI.backgroundColor = new Color(0.0f, 0.85f, 1.0f, 0.9f);
-            if (GUILayout.Button(new GUIContent("🚀 Send", "Send message (Enter)"), _buttonStyle))
-            {
-                if (!string.IsNullOrEmpty(_userMessage))
-                {
-                    SendChatMessage();
-                }
-            }
-            GUI.backgroundColor = Color.white;
-
-            // Export button with purple
-            GUI.backgroundColor = ACCENT_PURPLE;
-            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat (Ctrl+E)"), _buttonStyle))
-            {
-                ExportChatHistory();
-            }
-            GUI.backgroundColor = Color.white;
-
-            // Clear button with red/pink
-            GUI.backgroundColor = ERROR_COLOR;
-            if (GUILayout.Button(new GUIContent("🗑️ Clear", "Clear chat (Ctrl+N)"), _buttonStyle))
-            {
-                if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
-                {
-                    _userMessage = "";
-                    _chatHistory.Clear();
-                    ShowNotification("Chat cleared", NotificationType.Info);
-                }
-            }
-            GUI.backgroundColor = Color.white;
-        }
+        EditorGUILayout.LabelField("� Commands: /analyze, /analyze-script, /export, /clear, /fix-errors", EditorStyles.miniLabel);
 
         EditorGUILayout.Space(8);
     }
@@ -720,9 +684,19 @@ public class KurdostAIMainWindow : EditorWindow
         if (string.IsNullOrEmpty(_userMessage))
             return;
 
-        _chatHistory.Add(new ChatMessage { Content = _userMessage, IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+        string message = _userMessage.Trim();
+        
+        // Handle commands
+        if (message.StartsWith("/"))
+        {
+            HandleCommand(message);
+            _userMessage = "";
+            return;
+        }
 
-        string userMsg = _userMessage;
+        _chatHistory.Add(new ChatMessage { Content = message, IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+
+        string userMsg = message;
         _userMessage = "";
 
         _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = userMsg });
@@ -738,6 +712,35 @@ public class KurdostAIMainWindow : EditorWindow
         Repaint();
 
         SendToBackendCoroutine(userMsg);
+    }
+
+    private void HandleCommand(string command)
+    {
+        string[] parts = command.Split(' ');
+        string cmd = parts[0].ToLower();
+
+        switch (cmd)
+        {
+            case "/analyze":
+                AnalyzeProject();
+                break;
+            case "/analyze-script":
+                AnalyzeSelectedScript();
+                break;
+            case "/export":
+                ExportChatHistory();
+                break;
+            case "/clear":
+                _chatHistory.Clear();
+                ShowNotification("Chat cleared", NotificationType.Info);
+                break;
+            case "/fix-errors":
+                FixConsoleErrors();
+                break;
+            default:
+                ShowNotification($"Unknown command: {cmd}", NotificationType.Warning);
+                break;
+        }
     }
 
     private void SendToBackendCoroutine(string message)
@@ -941,58 +944,6 @@ public class KurdostAIMainWindow : EditorWindow
             EditorUtility.DisplayDialog("Export Error", $"Failed to export: {ex.Message}", "OK");
             ShowNotification("Export failed", NotificationType.Error);
             Debug.LogError($"[KurdostAI] Export error: {ex}");
-        }
-    }
-
-    private void DrawToolsTab()
-    {
-        EditorGUILayout.LabelField("🔧 Analysis Tools", _labelStyle, GUILayout.Height(30));
-        EditorGUILayout.Space(12);
-
-        using (new EditorGUILayout.VerticalScope(_sectionStyle))
-        {
-            EditorGUILayout.LabelField("⚡ Quick Actions:", _labelStyle);
-            EditorGUILayout.Space(12);
-
-            GUI.backgroundColor = new Color(0.0f, 0.85f, 1.0f, 0.9f);
-            if (GUILayout.Button(new GUIContent("📝 Analyze Selected Script", "Analyze the selected C# script for code quality and improvements"), _buttonStyle))
-            {
-                AnalyzeSelectedScript();
-            }
-            GUI.backgroundColor = Color.white;
-
-            EditorGUILayout.Space(10);
-
-            GUI.backgroundColor = WARNING_COLOR;
-            if (GUILayout.Button(new GUIContent("🐛 Fix Console Errors", "Analyze and provide fixes for console errors"), _buttonStyle))
-            {
-                FixConsoleErrors();
-            }
-            GUI.backgroundColor = Color.white;
-
-            EditorGUILayout.Space(10);
-
-            GUI.backgroundColor = SUCCESS_COLOR;
-            if (GUILayout.Button(new GUIContent("✨ Generate Script", "Generate a new Unity script with AI assistance"), _buttonStyle))
-            {
-                GenerateScript();
-            }
-            GUI.backgroundColor = Color.white;
-
-            EditorGUILayout.Space(10);
-
-            GUI.backgroundColor = new Color(0.6f, 0.3f, 1.0f, 0.9f);
-            if (GUILayout.Button(new GUIContent("📂 Analyze Project", "Analyze the entire Unity project structure and files"), _buttonStyle))
-            {
-                AnalyzeProject();
-            }
-            GUI.backgroundColor = Color.white;
-
-            EditorGUILayout.Space(16);
-            
-            GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.25f);
-            EditorGUILayout.HelpBox("💡 Tip: Select a script in the Project view to analyze it", MessageType.Info);
-            GUI.backgroundColor = Color.white;
         }
     }
 
