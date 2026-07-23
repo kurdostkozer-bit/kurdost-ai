@@ -1,6 +1,6 @@
 {
   "name": "KurdostAI.Editor",
-  "rootNamespace": "KurdostAI",
+  "rootNamespace": "",
   "references": [],
   "includePlatforms": [
     "Editor"
