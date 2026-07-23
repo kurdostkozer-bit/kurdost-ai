@@ -27,24 +27,64 @@ public class KurdostAIMainWindow : EditorWindow
     private float _notificationTimer = 0f;
 
     // Colors - Modern Glassmorphism Theme (Morpheusm) - Enhanced
-    private static readonly Color GRADIENT_START = new Color(0.1f, 0.5f, 0.95f, 1.0f);     // Cyan Blue
-    private static readonly Color GRADIENT_END = new Color(0.4f, 0.2f, 0.9f, 1.0f);        // Purple
-    private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 0.95f);
-    private static readonly Color HEADER_COLOR_END = new Color(0.5f, 0.3f, 0.95f, 0.95f);
-    private static readonly Color TAB_ACTIVE = new Color(0.2f, 0.7f, 1.0f, 0.8f);          // Bright Cyan
-    private static readonly Color TAB_INACTIVE = new Color(0.15f, 0.25f, 0.4f, 0.5f);    // Dark Blue
-    private static readonly Color SECTION_BG = new Color(0.12f, 0.18f, 0.3f, 0.35f);     // Glassmorphic
-    private static readonly Color INPUT_BG = new Color(0.85f, 0.88f, 0.95f, 0.7f);       // Light White Glass
-    private static readonly Color GLASS_OVERLAY = new Color(1.0f, 1.0f, 1.0f, 0.05f);    // White Glass
-    private static readonly Color SUCCESS_COLOR = new Color(0.1f, 0.95f, 0.4f, 0.9f);    // Mint Green
-    private static readonly Color ERROR_COLOR = new Color(1.0f, 0.2f, 0.4f, 0.9f);       // Coral Red
-    private static readonly Color WARNING_COLOR = new Color(1.0f, 0.75f, 0.1f, 0.9f);    // Golden Orange
-    private static readonly Color INFO_COLOR = new Color(0.2f, 0.7f, 1.0f, 0.9f);        // Cyan
-    private static readonly Color USER_MESSAGE_BG = new Color(0.15f, 0.5f, 0.95f, 0.25f); // User Blue Glass
-    private static readonly Color AI_MESSAGE_BG = new Color(0.25f, 0.35f, 0.6f, 0.3f);   // AI Purple Glass
-    private static readonly Color ERROR_MESSAGE_BG = new Color(1.0f, 0.2f, 0.4f, 0.25f); // Error Glass
-    private static readonly Color ACCENT_CYAN = new Color(0.0f, 0.95f, 1.0f, 1.0f);      // Pure Cyan
-    private static readonly Color ACCENT_PURPLE = new Color(0.7f, 0.3f, 1.0f, 1.0f);     // Vibrant Purple
+    private Color GRADIENT_START;
+    private Color GRADIENT_END;
+    private Color HEADER_COLOR;
+    private Color HEADER_COLOR_END;
+    private Color TAB_ACTIVE;
+    private Color TAB_INACTIVE;
+    private Color SECTION_BG;
+    private Color INPUT_BG;
+    private Color GLASS_OVERLAY;
+    private Color SUCCESS_COLOR;
+    private Color ERROR_COLOR;
+    private Color WARNING_COLOR;
+    private Color INFO_COLOR;
+    private Color USER_MESSAGE_BG;
+    private Color AI_MESSAGE_BG;
+    private Color ERROR_MESSAGE_BG;
+    private Color ACCENT_CYAN;
+    private Color ACCENT_PURPLE;
+
+    // Dark Theme Colors
+    private static readonly Color DARK_GRADIENT_START = new Color(0.1f, 0.5f, 0.95f, 1.0f);
+    private static readonly Color DARK_GRADIENT_END = new Color(0.4f, 0.2f, 0.9f, 1.0f);
+    private static readonly Color DARK_HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 0.95f);
+    private static readonly Color DARK_HEADER_COLOR_END = new Color(0.5f, 0.3f, 0.95f, 0.95f);
+    private static readonly Color DARK_TAB_ACTIVE = new Color(0.2f, 0.7f, 1.0f, 0.8f);
+    private static readonly Color DARK_TAB_INACTIVE = new Color(0.15f, 0.25f, 0.4f, 0.5f);
+    private static readonly Color DARK_SECTION_BG = new Color(0.12f, 0.18f, 0.3f, 0.35f);
+    private static readonly Color DARK_INPUT_BG = new Color(0.85f, 0.88f, 0.95f, 0.7f);
+    private static readonly Color DARK_GLASS_OVERLAY = new Color(1.0f, 1.0f, 1.0f, 0.05f);
+    private static readonly Color DARK_SUCCESS_COLOR = new Color(0.1f, 0.95f, 0.4f, 0.9f);
+    private static readonly Color DARK_ERROR_COLOR = new Color(1.0f, 0.2f, 0.4f, 0.9f);
+    private static readonly Color DARK_WARNING_COLOR = new Color(1.0f, 0.75f, 0.1f, 0.9f);
+    private static readonly Color DARK_INFO_COLOR = new Color(0.2f, 0.7f, 1.0f, 0.9f);
+    private static readonly Color DARK_USER_MESSAGE_BG = new Color(0.15f, 0.5f, 0.95f, 0.25f);
+    private static readonly Color DARK_AI_MESSAGE_BG = new Color(0.25f, 0.35f, 0.6f, 0.3f);
+    private static readonly Color DARK_ERROR_MESSAGE_BG = new Color(1.0f, 0.2f, 0.4f, 0.25f);
+    private static readonly Color DARK_ACCENT_CYAN = new Color(0.0f, 0.95f, 1.0f, 1.0f);
+    private static readonly Color DARK_ACCENT_PURPLE = new Color(0.7f, 0.3f, 1.0f, 1.0f);
+
+    // Light Theme Colors
+    private static readonly Color LIGHT_GRADIENT_START = new Color(0.3f, 0.7f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_GRADIENT_END = new Color(0.6f, 0.4f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_HEADER_COLOR = new Color(0.4f, 0.7f, 1.0f, 0.95f);
+    private static readonly Color LIGHT_HEADER_COLOR_END = new Color(0.7f, 0.5f, 1.0f, 0.95f);
+    private static readonly Color LIGHT_TAB_ACTIVE = new Color(0.4f, 0.8f, 1.0f, 0.85f);
+    private static readonly Color LIGHT_TAB_INACTIVE = new Color(0.7f, 0.7f, 0.8f, 0.6f);
+    private static readonly Color LIGHT_SECTION_BG = new Color(0.9f, 0.92f, 0.95f, 0.6f);
+    private static readonly Color LIGHT_INPUT_BG = new Color(0.95f, 0.97f, 1.0f, 0.8f);
+    private static readonly Color LIGHT_GLASS_OVERLAY = new Color(0.0f, 0.0f, 0.0f, 0.05f);
+    private static readonly Color LIGHT_SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.3f, 0.95f);
+    private static readonly Color LIGHT_ERROR_COLOR = new Color(0.9f, 0.2f, 0.3f, 0.95f);
+    private static readonly Color LIGHT_WARNING_COLOR = new Color(0.95f, 0.6f, 0.1f, 0.95f);
+    private static readonly Color LIGHT_INFO_COLOR = new Color(0.3f, 0.6f, 0.9f, 0.95f);
+    private static readonly Color LIGHT_USER_MESSAGE_BG = new Color(0.7f, 0.85f, 1.0f, 0.4f);
+    private static readonly Color LIGHT_AI_MESSAGE_BG = new Color(0.85f, 0.9f, 0.95f, 0.5f);
+    private static readonly Color LIGHT_ERROR_MESSAGE_BG = new Color(1.0f, 0.85f, 0.85f, 0.4f);
+    private static readonly Color LIGHT_ACCENT_CYAN = new Color(0.0f, 0.8f, 0.9f, 1.0f);
+    private static readonly Color LIGHT_ACCENT_PURPLE = new Color(0.6f, 0.4f, 0.9f, 1.0f);
 
     // Styles
     private GUIStyle _headerStyle;
@@ -72,19 +112,24 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void OnEnable()
     {
-        // Styles will be initialized on first OnGUI call
+        // Initialize theme colors
+        _selectedTheme = EditorPrefs.GetInt("KurdostAI_Theme", 0);
+        ApplyTheme();
     }
 
     private void InitializeStyles()
     {
+        Color textColor = _selectedTheme == 0 ? new Color(0.9f, 1.0f, 1.0f, 1.0f) : new Color(0.1f, 0.1f, 0.15f, 1.0f);
+        Color inputTextColor = _selectedTheme == 0 ? Color.black : new Color(0.1f, 0.1f, 0.15f, 1.0f);
+
         _headerStyle = new GUIStyle(EditorStyles.boldLabel)
         {
             fontSize = 22,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter,
             padding = new RectOffset(10, 10, 20, 20),
-            normal = { textColor = new Color(0.9f, 1.0f, 1.0f, 1.0f) },
-            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) }
+            normal = { textColor = textColor },
+            hover = { textColor = textColor }
         };
 
         _tabStyle = new GUIStyle(GUI.skin.button)
@@ -94,8 +139,8 @@ public class KurdostAIMainWindow : EditorWindow
             padding = new RectOffset(16, 16, 12, 12),
             margin = new RectOffset(4, 4, 4, 4),
             border = new RectOffset(8, 8, 8, 8),
-            normal = { textColor = new Color(0.85f, 0.9f, 1.0f, 0.9f) },
-            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) }
+            normal = { textColor = textColor },
+            hover = { textColor = textColor }
         };
 
         _sectionStyle = new GUIStyle(GUI.skin.box)
@@ -112,8 +157,8 @@ public class KurdostAIMainWindow : EditorWindow
             fontStyle = FontStyle.Bold,
             padding = new RectOffset(16, 16, 12, 12),
             fixedHeight = 42,
-            normal = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) },
-            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) },
+            normal = { textColor = Color.white },
+            hover = { textColor = Color.white },
             active = { textColor = new Color(0.9f, 0.95f, 1.0f, 1.0f) }
         };
 
@@ -123,7 +168,7 @@ public class KurdostAIMainWindow : EditorWindow
             padding = new RectOffset(16, 16, 12, 12),
             wordWrap = true,
             richText = true,
-            normal = { textColor = new Color(0.95f, 0.95f, 1.0f, 1.0f) }
+            normal = { textColor = textColor }
         };
 
         _userMessageStyle = new GUIStyle(_messageStyle)
@@ -152,11 +197,11 @@ public class KurdostAIMainWindow : EditorWindow
             richText = true,
             normal = { 
                 background = MakeGlassTexture(2, 2, INPUT_BG),
-                textColor = Color.black
+                textColor = inputTextColor
             },
             focused = {
                 background = MakeGlassTexture(2, 2, INPUT_BG),
-                textColor = Color.black
+                textColor = inputTextColor
             }
         };
 
@@ -165,7 +210,7 @@ public class KurdostAIMainWindow : EditorWindow
             fontSize = 12,
             fontStyle = FontStyle.Bold,
             padding = new RectOffset(0, 0, 4, 4),
-            normal = { textColor = new Color(0.85f, 0.95f, 1.0f, 0.95f) }
+            normal = { textColor = textColor }
         };
     }
 
@@ -1272,9 +1317,60 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
 
     private void ApplyTheme()
     {
-        // Theme colors would be applied here based on selection
-        // For now, we keep the dark theme as default
-        // Light theme implementation can be added later
+        if (_selectedTheme == 0) // Dark Theme
+        {
+            GRADIENT_START = DARK_GRADIENT_START;
+            GRADIENT_END = DARK_GRADIENT_END;
+            HEADER_COLOR = DARK_HEADER_COLOR;
+            HEADER_COLOR_END = DARK_HEADER_COLOR_END;
+            TAB_ACTIVE = DARK_TAB_ACTIVE;
+            TAB_INACTIVE = DARK_TAB_INACTIVE;
+            SECTION_BG = DARK_SECTION_BG;
+            INPUT_BG = DARK_INPUT_BG;
+            GLASS_OVERLAY = DARK_GLASS_OVERLAY;
+            SUCCESS_COLOR = DARK_SUCCESS_COLOR;
+            ERROR_COLOR = DARK_ERROR_COLOR;
+            WARNING_COLOR = DARK_WARNING_COLOR;
+            INFO_COLOR = DARK_INFO_COLOR;
+            USER_MESSAGE_BG = DARK_USER_MESSAGE_BG;
+            AI_MESSAGE_BG = DARK_AI_MESSAGE_BG;
+            ERROR_MESSAGE_BG = DARK_ERROR_MESSAGE_BG;
+            ACCENT_CYAN = DARK_ACCENT_CYAN;
+            ACCENT_PURPLE = DARK_ACCENT_PURPLE;
+        }
+        else // Light Theme
+        {
+            GRADIENT_START = LIGHT_GRADIENT_START;
+            GRADIENT_END = LIGHT_GRADIENT_END;
+            HEADER_COLOR = LIGHT_HEADER_COLOR;
+            HEADER_COLOR_END = LIGHT_HEADER_COLOR_END;
+            TAB_ACTIVE = LIGHT_TAB_ACTIVE;
+            TAB_INACTIVE = LIGHT_TAB_INACTIVE;
+            SECTION_BG = LIGHT_SECTION_BG;
+            INPUT_BG = LIGHT_INPUT_BG;
+            GLASS_OVERLAY = LIGHT_GLASS_OVERLAY;
+            SUCCESS_COLOR = LIGHT_SUCCESS_COLOR;
+            ERROR_COLOR = LIGHT_ERROR_COLOR;
+            WARNING_COLOR = LIGHT_WARNING_COLOR;
+            INFO_COLOR = LIGHT_INFO_COLOR;
+            USER_MESSAGE_BG = LIGHT_USER_MESSAGE_BG;
+            AI_MESSAGE_BG = LIGHT_AI_MESSAGE_BG;
+            ERROR_MESSAGE_BG = LIGHT_ERROR_MESSAGE_BG;
+            ACCENT_CYAN = LIGHT_ACCENT_CYAN;
+            ACCENT_PURPLE = LIGHT_ACCENT_PURPLE;
+        }
+
+        // Reinitialize styles with new theme colors
+        _headerStyle = null;
+        _tabStyle = null;
+        _sectionStyle = null;
+        _buttonStyle = null;
+        _messageStyle = null;
+        _userMessageStyle = null;
+        _aiMessageStyle = null;
+        _errorMessageStyle = null;
+        _inputStyle = null;
+        _labelStyle = null;
     }
 
     private void UpdateNotifications()
