@@ -216,6 +216,12 @@ public class KurdostAIMainWindow : EditorWindow
                 break;
         }
 
+        // Draw input area outside scroll view for Chat tab
+        if (_selectedTab == 0)
+        {
+            DrawChatInputArea();
+        }
+
         EditorGUILayout.EndScrollView();
 
         // Draw notifications
@@ -422,7 +428,10 @@ public class KurdostAIMainWindow : EditorWindow
 
             EditorGUILayout.EndScrollView();
         }
+    }
 
+    private void DrawChatInputArea()
+    {
         EditorGUILayout.Space(12);
 
         EditorGUILayout.LabelField("✍️ Your Message:", _labelStyle);
