@@ -1110,12 +1110,12 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
 
     private void DrawSettingsTab()
     {
-        EditorGUILayout.LabelField("⚙️ Settings", _labelStyle, GUILayout.Height(30));
+        EditorGUILayout.LabelField("⚙️ Settings", _labelStyle ?? EditorStyles.label, GUILayout.Height(30));
         EditorGUILayout.Space(12);
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle))
         {
-            EditorGUILayout.LabelField("🔑 API Configuration", _labelStyle);
+            EditorGUILayout.LabelField("🔑 API Configuration", _labelStyle ?? EditorStyles.label);
             EditorGUILayout.Space(8);
 
             bool hasKey = EditorPrefs.HasKey("KurdostAI_ApiKey");
@@ -1129,7 +1129,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(16);
 
             // Provider Selection
-            EditorGUILayout.LabelField("🌐 Provider", _labelStyle);
+            EditorGUILayout.LabelField("🌐 Provider", _labelStyle ?? EditorStyles.label);
             string[] providers = { "groq", "gemini" };
             int currentProviderIndex = System.Array.IndexOf(providers, EditorPrefs.GetString("KurdostAI_Provider", "groq"));
             GUI.backgroundColor = new Color(0.2f, 0.6f, 1.0f, 0.7f);
@@ -1148,7 +1148,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(12);
 
             // Model Selection
-            EditorGUILayout.LabelField("🤖 Model", _labelStyle);
+            EditorGUILayout.LabelField("🤖 Model", _labelStyle ?? EditorStyles.label);
             string[] models = { "llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768" };
             int currentModelIndex = System.Array.IndexOf(models, EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant"));
             GUI.backgroundColor = new Color(0.6f, 0.3f, 1.0f, 0.7f);
@@ -1167,7 +1167,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(12);
 
             // Temperature Control
-            EditorGUILayout.LabelField("🌡️ Temperature", _labelStyle);
+            EditorGUILayout.LabelField("🌡️ Temperature", _labelStyle ?? EditorStyles.label);
             float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
             GUI.backgroundColor = new Color(1.0f, 0.6f, 0.2f, 0.6f);
             float newTemperature = EditorGUILayout.Slider(temperature, 0.0f, 2.0f);
@@ -1181,7 +1181,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(12);
 
             // Max Tokens Control
-            EditorGUILayout.LabelField("📊 Max Tokens", _labelStyle);
+            EditorGUILayout.LabelField("📊 Max Tokens", _labelStyle ?? EditorStyles.label);
             int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
             GUI.backgroundColor = new Color(0.2f, 0.85f, 0.6f, 0.6f);
             int newMaxTokens = EditorGUILayout.IntSlider(maxTokens, 100, 4000);
@@ -1195,7 +1195,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(16);
 
             // Custom Server URL
-            EditorGUILayout.LabelField("🌍 Server URL", _labelStyle);
+            EditorGUILayout.LabelField("🌍 Server URL", _labelStyle ?? EditorStyles.label);
             string serverUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
             GUI.backgroundColor = INPUT_BG;
             string newServerUrl = EditorGUILayout.TextField(serverUrl);
@@ -1208,7 +1208,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(16);
 
             // Server Status
-            EditorGUILayout.LabelField("📡 Server Status", _labelStyle);
+            EditorGUILayout.LabelField("📡 Server Status", _labelStyle ?? EditorStyles.label);
             bool isConnected = CheckServerConnection();
             GUI.backgroundColor = isConnected ? SUCCESS_COLOR : ERROR_COLOR;
             EditorGUILayout.LabelField(
@@ -1220,7 +1220,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(16);
 
             // Language Preference
-            EditorGUILayout.LabelField("🌐 Language", _labelStyle);
+            EditorGUILayout.LabelField("🌐 Language", _labelStyle ?? EditorStyles.label);
             _selectedLanguage = EditorPrefs.GetInt("KurdostAI_Language", 0);
             GUI.backgroundColor = new Color(0.2f, 0.7f, 1.0f, 0.6f);
             int newLanguage = EditorGUILayout.Popup(_selectedLanguage, _languages);
@@ -1235,7 +1235,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(12);
 
             // Theme Selection
-            EditorGUILayout.LabelField("🎨 Theme", _labelStyle);
+            EditorGUILayout.LabelField("🎨 Theme", _labelStyle ?? EditorStyles.label);
             _selectedTheme = EditorPrefs.GetInt("KurdostAI_Theme", 0);
             GUI.backgroundColor = ACCENT_PURPLE;
             int newTheme = EditorGUILayout.Popup(_selectedTheme, _themes);
@@ -1250,7 +1250,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
 
             EditorGUILayout.Space(16);
 
-            EditorGUILayout.LabelField("🔐 Change API Key", _labelStyle);
+            EditorGUILayout.LabelField("🔐 Change API Key", _labelStyle ?? EditorStyles.label);
             GUI.backgroundColor = INPUT_BG;
             _settingsApiKeyInput = EditorGUILayout.PasswordField(_settingsApiKeyInput, GUILayout.Height(32));
             GUI.backgroundColor = Color.white;
@@ -1360,7 +1360,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             ACCENT_PURPLE = LIGHT_ACCENT_PURPLE;
         }
 
-        // Reinitialize styles with new theme colors
+        // Mark styles for reinitialization on next OnGUI
         _headerStyle = null;
         _tabStyle = null;
         _sectionStyle = null;
