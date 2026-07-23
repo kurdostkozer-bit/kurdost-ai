@@ -157,7 +157,17 @@ public class KurdostAIMainWindow : EditorWindow
 
         if (e.type == EventType.KeyDown)
         {
-            // Ctrl+Enter to send message
+            // Enter to send message (when not holding Shift for new line)
+            if (e.keyCode == KeyCode.Return && !e.shift)
+            {
+                if (_selectedTab == 0 && !string.IsNullOrEmpty(_userMessage))
+                {
+                    SendChatMessage();
+                    e.Use();
+                }
+            }
+
+            // Ctrl+Enter to send message (alternative)
             if (e.control && e.keyCode == KeyCode.Return)
             {
                 if (_selectedTab == 0 && !string.IsNullOrEmpty(_userMessage))
