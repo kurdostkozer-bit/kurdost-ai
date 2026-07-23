@@ -11,7 +11,6 @@ public class KurdostAIMainWindow : EditorWindow
     private string _userMessage = "";
     private string _apiKeyInput = "";
     private int _selectedTab = 0;
-    private bool _isLoading = false;
     private List<ChatMessage> _chatHistory = new List<ChatMessage>();
 
     // Colors
@@ -289,7 +288,6 @@ public class KurdostAIMainWindow : EditorWindow
 
         _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false });
 
-        _isLoading = true;
         Repaint();
 
         SendToBackendCoroutine(userMsg);
@@ -319,10 +317,7 @@ public class KurdostAIMainWindow : EditorWindow
             messages = new object[]
             {
                 new { role = "user", content = message }
-            },
-            model = "llama-3.1-8b-instant",
-            temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f),
-            max_tokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000)
+            }
         };
 
         string jsonBody = JsonUtility.ToJson(requestData);
@@ -413,7 +408,6 @@ public class KurdostAIMainWindow : EditorWindow
 
         _chatHistory.Add(new ChatMessage { Content = response, IsUser = false });
 
-        _isLoading = false;
         Repaint();
     }
 
