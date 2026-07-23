@@ -67,24 +67,24 @@ public class KurdostAIMainWindow : EditorWindow
     private static readonly Color DARK_ACCENT_PURPLE = new Color(0.7f, 0.3f, 1.0f, 1.0f);
 
     // Light Theme Colors
-    private static readonly Color LIGHT_GRADIENT_START = new Color(0.3f, 0.7f, 1.0f, 1.0f);
-    private static readonly Color LIGHT_GRADIENT_END = new Color(0.6f, 0.4f, 1.0f, 1.0f);
-    private static readonly Color LIGHT_HEADER_COLOR = new Color(0.4f, 0.7f, 1.0f, 0.95f);
-    private static readonly Color LIGHT_HEADER_COLOR_END = new Color(0.7f, 0.5f, 1.0f, 0.95f);
-    private static readonly Color LIGHT_TAB_ACTIVE = new Color(0.4f, 0.8f, 1.0f, 0.85f);
-    private static readonly Color LIGHT_TAB_INACTIVE = new Color(0.7f, 0.7f, 0.8f, 0.6f);
-    private static readonly Color LIGHT_SECTION_BG = new Color(0.9f, 0.92f, 0.95f, 0.6f);
-    private static readonly Color LIGHT_INPUT_BG = new Color(0.95f, 0.97f, 1.0f, 0.8f);
-    private static readonly Color LIGHT_GLASS_OVERLAY = new Color(0.0f, 0.0f, 0.0f, 0.05f);
-    private static readonly Color LIGHT_SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.3f, 0.95f);
-    private static readonly Color LIGHT_ERROR_COLOR = new Color(0.9f, 0.2f, 0.3f, 0.95f);
-    private static readonly Color LIGHT_WARNING_COLOR = new Color(0.95f, 0.6f, 0.1f, 0.95f);
-    private static readonly Color LIGHT_INFO_COLOR = new Color(0.3f, 0.6f, 0.9f, 0.95f);
-    private static readonly Color LIGHT_USER_MESSAGE_BG = new Color(0.7f, 0.85f, 1.0f, 0.4f);
-    private static readonly Color LIGHT_AI_MESSAGE_BG = new Color(0.85f, 0.9f, 0.95f, 0.5f);
-    private static readonly Color LIGHT_ERROR_MESSAGE_BG = new Color(1.0f, 0.85f, 0.85f, 0.4f);
-    private static readonly Color LIGHT_ACCENT_CYAN = new Color(0.0f, 0.8f, 0.9f, 1.0f);
-    private static readonly Color LIGHT_ACCENT_PURPLE = new Color(0.6f, 0.4f, 0.9f, 1.0f);
+    private static readonly Color LIGHT_GRADIENT_START = new Color(0.5f, 0.8f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_GRADIENT_END = new Color(0.7f, 0.6f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_HEADER_COLOR = new Color(0.6f, 0.85f, 1.0f, 0.95f);
+    private static readonly Color LIGHT_HEADER_COLOR_END = new Color(0.8f, 0.7f, 1.0f, 0.95f);
+    private static readonly Color LIGHT_TAB_ACTIVE = new Color(0.6f, 0.9f, 1.0f, 0.9f);
+    private static readonly Color LIGHT_TAB_INACTIVE = new Color(0.85f, 0.85f, 0.9f, 0.7f);
+    private static readonly Color LIGHT_SECTION_BG = new Color(0.98f, 0.98f, 1.0f, 0.8f);
+    private static readonly Color LIGHT_INPUT_BG = new Color(1.0f, 1.0f, 1.0f, 0.9f);
+    private static readonly Color LIGHT_GLASS_OVERLAY = new Color(1.0f, 1.0f, 1.0f, 0.1f);
+    private static readonly Color LIGHT_SUCCESS_COLOR = new Color(0.3f, 0.9f, 0.4f, 1.0f);
+    private static readonly Color LIGHT_ERROR_COLOR = new Color(1.0f, 0.3f, 0.4f, 1.0f);
+    private static readonly Color LIGHT_WARNING_COLOR = new Color(1.0f, 0.7f, 0.2f, 1.0f);
+    private static readonly Color LIGHT_INFO_COLOR = new Color(0.4f, 0.7f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_USER_MESSAGE_BG = new Color(0.85f, 0.95f, 1.0f, 0.6f);
+    private static readonly Color LIGHT_AI_MESSAGE_BG = new Color(0.95f, 0.97f, 1.0f, 0.7f);
+    private static readonly Color LIGHT_ERROR_MESSAGE_BG = new Color(1.0f, 0.9f, 0.9f, 0.6f);
+    private static readonly Color LIGHT_ACCENT_CYAN = new Color(0.0f, 0.9f, 1.0f, 1.0f);
+    private static readonly Color LIGHT_ACCENT_PURPLE = new Color(0.7f, 0.5f, 1.0f, 1.0f);
 
     // Styles
     private GUIStyle _headerStyle;
@@ -119,8 +119,8 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void InitializeStyles()
     {
-        Color textColor = _selectedTheme == 0 ? new Color(0.9f, 1.0f, 1.0f, 1.0f) : new Color(0.1f, 0.1f, 0.15f, 1.0f);
-        Color inputTextColor = _selectedTheme == 0 ? Color.black : new Color(0.1f, 0.1f, 0.15f, 1.0f);
+        Color textColor = _selectedTheme == 0 ? new Color(0.9f, 1.0f, 1.0f, 1.0f) : new Color(0.15f, 0.15f, 0.2f, 1.0f);
+        Color inputTextColor = _selectedTheme == 0 ? Color.black : new Color(0.15f, 0.15f, 0.2f, 1.0f);
 
         _headerStyle = new GUIStyle(EditorStyles.boldLabel)
         {
