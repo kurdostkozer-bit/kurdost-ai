@@ -621,26 +621,155 @@ public class KurdostAIMainWindow : EditorWindow
 
             if (GUILayout.Button("📝 Analyze Selected Script", _buttonStyle))
             {
-                EditorUtility.DisplayDialog("Coming Soon", "Script analysis coming in v0.4", "OK");
+                AnalyzeSelectedScript();
             }
 
             EditorGUILayout.Space(5);
 
             if (GUILayout.Button("🐛 Fix Console Errors", _buttonStyle))
             {
-                EditorUtility.DisplayDialog("Coming Soon", "Error analysis coming in v0.4", "OK");
+                FixConsoleErrors();
             }
 
             EditorGUILayout.Space(5);
 
             if (GUILayout.Button("✨ Generate Script", _buttonStyle))
             {
-                EditorUtility.DisplayDialog("Coming Soon", "Code generation coming in v0.4", "OK");
+                GenerateScript();
             }
 
             EditorGUILayout.Space(15);
-            EditorGUILayout.HelpBox("Advanced tools coming in v0.4", MessageType.Info);
+            EditorGUILayout.HelpBox("Select a script in Project view to analyze it", MessageType.Info);
         }
+    }
+
+    private void AnalyzeSelectedScript()
+    {
+        var selectedObject = Selection.activeObject;
+        if (selectedObject == null)
+        {
+            EditorUtility.DisplayDialog("No Selection", "Please select a script in the Project view", "OK");
+            return;
+        }
+
+        string assetPath = AssetDatabase.GetAssetPath(selectedObject);
+        if (!assetPath.EndsWith(".cs"))
+        {
+            EditorUtility.DisplayDialog("Invalid Selection", "Please select a C# script file", "OK");
+            return;
+        }
+
+        string scriptContent = System.IO.File.ReadAllText(assetPath);
+        if (string.IsNullOrEmpty(scriptContent))
+        {
+            EditorUtility.DisplayDialog("Error", "Could not read script content", "OK");
+            return;
+        }
+
+        // Add analysis request to chat
+        _chatHistory.Add(new ChatMessage { Content = $"Analyzing script: {selectedObject.name}", IsUser =
+true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+
+        string analysisPrompt = $"Analyze this C# script for Unity:\n\n{scriptContent}\n\nProvide feedback on code quality, potential issues, and suggestions for improvement.";
+
+        _chatHistory.Add(new ChatMessage { Content = "Loading analysis...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = analysisPrompt });
+
+        _isLoading = true;
+        _loadingFrame = 0;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
+
+        Repaint();
+
+        SendToBackendCoroutine(analysisPrompt);
+    }
+
+    private void FixConsoleErrors()
+    {
+        var logEntries = System.Type.GetType("UnityEditor.LogEntries, UnityEditor");
+        if (logEntries == null)
+        {
+            EditorUtility.DisplayDialog("Error", "Could not access console logs", "OK");
+            return;
+        }
+
+        var startMethod = logEntries.GetMethod("Start", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+        var endMethod = logEntries.GetMethod("End", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+        var getEntryMethod = logEntries.GetMethod("GetEntry", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+
+        if (startMethod == null || endMethod == null || getEntryMethod == null)
+        {
+            EditorUtility.DisplayDialog("Error", "Could not access console log methods", "OK");
+            return;
+        }
+
+        int count = (int)startMethod.Invoke(null, null);
+        System.Text.StringBuilder errorLog = new System.Text.StringBuilder();
+
+        for (int i = 0; i < count; i++)
+        {
+            var entry = getEntryMethod.Invoke(null, new object[] { i });
+            var modeProp = entry.GetType().GetProperty("mode");
+            var messageProp = entry.GetType().GetProperty("message");
+
+            if (modeProp != null && messageProp != null)
+            {
+                int mode = (int)modeProp.GetValue(entry);
+                string message = (string)messageProp.GetValue(entry);
+
+                if (mode == 1) // Error mode
+                {
+                    errorLog.AppendLine(message);
+                }
+            }
+        }
+
+        endMethod.Invoke(null, null);
+
+        if (errorLog.Length == 0)
+        {
+            EditorUtility.DisplayDialog("No Errors", "No errors found in console", "OK");
+            return;
+        }
+
+        // Add error fixing request to chat
+        _chatHistory.Add(new ChatMessage { Content = "Fixing console errors", IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+
+        string fixPrompt = $"Fix these Unity console errors:\n\n{errorLog.ToString()}\n\nProvide solutions for each error.";
+
+        _chatHistory.Add(new ChatMessage { Content = "Loading fixes...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = fixPrompt });
+
+        _isLoading = true;
+        _loadingFrame = 0;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
+
+        Repaint();
+
+        SendToBackendCoroutine(fixPrompt);
+    }
+
+    private void GenerateScript()
+    {
+        // Switch to chat tab for script generation
+        _selectedTab = 0;
+        Repaint();
+
+        // Add prompt message to chat
+        _chatHistory.Add(new ChatMessage { Content = "I want to generate a Unity script. Please describe what you need.", IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
+
+        Repaint();
     }
 
     private void DrawSettingsTab()
