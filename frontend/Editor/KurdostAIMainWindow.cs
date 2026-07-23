@@ -311,16 +311,10 @@ public class KurdostAIMainWindow : EditorWindow
             return;
         }
 
-        var requestData = new
-        {
-            provider = provider,
-            messages = new object[]
-            {
-                new { role = "user", content = message }
-            }
-        };
-
-        string jsonBody = JsonUtility.ToJson(requestData);
+        // Manually construct JSON to avoid JsonUtility limitations
+        string escapedMessage = message.Replace("\"", "\\\"");
+        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}]}}";
+        Debug.Log($"[KurdostAI] Request body: {jsonBody}");
 
         _currentRequest = new UnityWebRequest(apiUrl, "POST");
         _currentRequest.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonBody));
