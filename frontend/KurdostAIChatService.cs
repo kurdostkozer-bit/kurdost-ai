@@ -13,8 +13,8 @@ namespace KurdostAI
     /// </summary>
     public class KurdostAIChatService
     {
-        // ✅ Backend URL - change to your server
-        private string _chatUrl = "http://localhost:3000/api/v1/chat";
+        // ✅ Backend URL - Production on Render
+        private string _chatUrl = "https://kurdost-ai-backend.onrender.com/api/v1/chat";
         private const int TIMEOUT = 60;
         private Dictionary<UnityWebRequest, Action<string>> _pendingRequests = 
             new Dictionary<UnityWebRequest, Action<string>>();
