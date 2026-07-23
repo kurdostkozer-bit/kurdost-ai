@@ -45,6 +45,7 @@ app.get('/providers', (req: Request, res: Response) => {
 app.post('/api/v1/chat', async (req: Request, res: Response) => {
   try {
     const { provider, messages } = req.body;
+    const apiKey = req.headers['x-api-key'] as string;
 
     if (!provider) {
       return res.status(400).json({ error: 'Provider is required' });
@@ -54,9 +55,29 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Messages array is required' });
     }
 
-    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}`);
+    // Use API key from header if provided, otherwise use environment variable
+    let effectiveApiKey = apiKey;
+    if (!effectiveApiKey && provider === 'groq') {
+      effectiveApiKey = process.env.GROQ_API_KEY;
+    } else if (!effectiveApiKey && provider === 'gemini') {
+      effectiveApiKey = process.env.GEMINI_API_KEY;
+    }
 
-    const response = await toolkit.sendMessage(provider, messages);
+    if (!effectiveApiKey) {
+      return res.status(400).json({ error: 'API key is required (either in header or environment variable)' });
+    }
+
+    // Temporarily override the provider's API key with the one from request
+    const tempToolkit = new AIToolkit();
+    if (provider === 'groq') {
+      tempToolkit.registerProvider('groq', new GroqProvider({ apiKey: effectiveApiKey }));
+    } else if (provider === 'gemini') {
+      tempToolkit.registerProvider('gemini', new GeminiProvider({ apiKey: effectiveApiKey }));
+    }
+
+    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, apiKeySource=${apiKey ? 'header' : 'env'}`);
+
+    const response = await tempToolkit.sendMessage(provider, messages);
 
     res.json({
       success: true,

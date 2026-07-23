@@ -10,6 +10,7 @@ public class KurdostAIMainWindow : EditorWindow
     private Vector2 _chatScrollPosition = Vector2.zero;
     private string _userMessage = "";
     private string _apiKeyInput = "";
+    private string _settingsApiKeyInput = "";
     private int _selectedTab = 0;
     private List<ChatMessage> _chatHistory = new List<ChatMessage>();
 
@@ -461,11 +462,24 @@ public class KurdostAIMainWindow : EditorWindow
 
             EditorGUILayout.Space(15);
 
+            EditorGUILayout.LabelField("Change API Key", EditorStyles.boldLabel);
+            _settingsApiKeyInput = EditorGUILayout.PasswordField(_settingsApiKeyInput);
+
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Change API Key", GUILayout.Height(30)))
+                if (GUILayout.Button("Save New Key", GUILayout.Height(30)))
                 {
-                    EditorUtility.DisplayDialog("Info", "API Key can be changed by logging out and logging back in.", "OK");
+                    if (!string.IsNullOrEmpty(_settingsApiKeyInput))
+                    {
+                        EditorPrefs.SetString("KurdostAI_ApiKey", _settingsApiKeyInput);
+                        _settingsApiKeyInput = "";
+                        EditorUtility.DisplayDialog("Success", "API Key updated successfully!", "OK");
+                        Repaint();
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("Error", "Please enter an API key", "OK");
+                    }
                 }
 
                 if (GUILayout.Button("Logout", GUILayout.Height(30)))
