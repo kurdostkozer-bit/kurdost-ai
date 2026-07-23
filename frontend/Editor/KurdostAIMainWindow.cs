@@ -313,7 +313,9 @@ public class KurdostAIMainWindow : EditorWindow
 
         // Manually construct JSON to avoid JsonUtility limitations
         string escapedMessage = message.Replace("\"", "\\\"");
-        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}]}}";
+        // Add system prompt to ensure correct Arabic response
+        string systemPrompt = "You are a helpful AI assistant. Always respond in the same language as the user's message. If the user writes in Arabic, respond in correct Arabic without spelling errors.";
+        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"system\",\"content\":\"{systemPrompt.Replace("\"", "\\\"")}\"}},{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}]}}";
         Debug.Log($"[KurdostAI] Request body: {jsonBody}");
 
         _currentRequest = new UnityWebRequest(apiUrl, "POST");
