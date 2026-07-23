@@ -1,0 +1,43 @@
+import axios from 'axios';
+
+export interface GroqConfig {
+  apiKey: string;
+  model?: string;
+}
+
+export class GroqProvider {
+  private apiKey: string;
+  private model: string;
+  private baseUrl = 'https://api.groq.com/openai/v1';
+
+  constructor(config: GroqConfig) {
+    this.apiKey = config.apiKey;
+    this.model = config.model || 'mixtral-8x7b-32768';
+  }
+
+  async send(messages: Array<{ role: string; content: string }>): Promise<string> {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/chat/completions`,
+        {
+          model: this.model,
+          messages,
+          temperature: 0.7,
+          max_tokens: 2048,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+
+      return response.data.choices[0].message.content;
+    } catch (error: any) {
+      console.error('Groq API Error:', error.response?.data || error.message);
+      throw new Error(`Groq API Error: ${error.message}`);
+    }
+  }
+}
