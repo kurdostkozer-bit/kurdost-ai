@@ -313,10 +313,7 @@ public class KurdostAIMainWindow : EditorWindow
 
         // Manually construct JSON to avoid JsonUtility limitations
         string escapedMessage = message.Replace("\"", "\\\"");
-        // Add language instruction in the user message
-        string enhancedMessage = $"Respond in the same language as this message. If this is Arabic, respond in correct Arabic without spelling errors. Message: {message}";
-        string escapedEnhancedMessage = enhancedMessage.Replace("\"", "\\\"");
-        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedEnhancedMessage}\"}}]}}";
+        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}]}}";
         Debug.Log($"[KurdostAI] Request body: {jsonBody}");
 
         _currentRequest = new UnityWebRequest(apiUrl, "POST");
