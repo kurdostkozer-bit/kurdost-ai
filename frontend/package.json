@@ -2,10 +2,12 @@
   "name": "com.kurdost.ai",
   "version": "1.0.0",
   "displayName": "Kurdost AI Toolkit",
-  "description": "AI-powered chat interface for Unity Editor",
+  "description": "AI-powered chat interface for Unity Editor - Works as a standalone plugin",
   "unity": "2020.3",
+  "unityRelease": "0f1",
   "author": {
-    "name": "Kurdost AI"
+    "name": "Kurdost AI",
+    "url": "https://github.com/kurdostkozer-bit"
   },
   "license": "MIT",
   "repository": {
@@ -17,6 +19,9 @@
     "chat",
     "groq",
     "gemini",
-    "editor-tool"
+    "editor-tool",
+    "plugin",
+    "tool"
   ]
 }
+
