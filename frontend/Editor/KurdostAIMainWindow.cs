@@ -26,20 +26,25 @@ public class KurdostAIMainWindow : EditorWindow
     private float _notificationDisplayTime = 3f;
     private float _notificationTimer = 0f;
 
-    // Colors - Modern Glassmorphism Theme (Morpheusm)
-    private static readonly Color HEADER_COLOR = new Color(0.4f, 0.2f, 0.8f, 0.9f);
-    private static readonly Color HEADER_COLOR_END = new Color(0.6f, 0.1f, 0.9f, 0.9f);
-    private static readonly Color TAB_ACTIVE = new Color(0.5f, 0.3f, 0.9f, 0.85f);
-    private static readonly Color TAB_INACTIVE = new Color(0.25f, 0.25f, 0.35f, 0.6f);
-    private static readonly Color SECTION_BG = new Color(0.15f, 0.15f, 0.25f, 0.5f);
-    private static readonly Color INPUT_BG = new Color(0.1f, 0.1f, 0.2f, 0.7f);
-    private static readonly Color SUCCESS_COLOR = new Color(0.2f, 0.9f, 0.5f, 0.9f);
-    private static readonly Color ERROR_COLOR = new Color(0.95f, 0.2f, 0.4f, 0.9f);
-    private static readonly Color WARNING_COLOR = new Color(1.0f, 0.7f, 0.2f, 0.9f);
-    private static readonly Color INFO_COLOR = new Color(0.3f, 0.6f, 1.0f, 0.9f);
-    private static readonly Color USER_MESSAGE_BG = new Color(0.3f, 0.5f, 0.9f, 0.35f);
-    private static readonly Color AI_MESSAGE_BG = new Color(0.2f, 0.2f, 0.35f, 0.45f);
-    private static readonly Color ERROR_MESSAGE_BG = new Color(0.7f, 0.15f, 0.3f, 0.35f);
+    // Colors - Modern Glassmorphism Theme (Morpheusm) - Enhanced
+    private static readonly Color GRADIENT_START = new Color(0.1f, 0.5f, 0.95f, 1.0f);     // Cyan Blue
+    private static readonly Color GRADIENT_END = new Color(0.4f, 0.2f, 0.9f, 1.0f);        // Purple
+    private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 0.95f);
+    private static readonly Color HEADER_COLOR_END = new Color(0.5f, 0.3f, 0.95f, 0.95f);
+    private static readonly Color TAB_ACTIVE = new Color(0.2f, 0.7f, 1.0f, 0.8f);          // Bright Cyan
+    private static readonly Color TAB_INACTIVE = new Color(0.15f, 0.25f, 0.4f, 0.5f);    // Dark Blue
+    private static readonly Color SECTION_BG = new Color(0.12f, 0.18f, 0.3f, 0.35f);     // Glassmorphic
+    private static readonly Color INPUT_BG = new Color(0.85f, 0.88f, 0.95f, 0.7f);       // Light White Glass
+    private static readonly Color GLASS_OVERLAY = new Color(1.0f, 1.0f, 1.0f, 0.05f);    // White Glass
+    private static readonly Color SUCCESS_COLOR = new Color(0.1f, 0.95f, 0.4f, 0.9f);    // Mint Green
+    private static readonly Color ERROR_COLOR = new Color(1.0f, 0.2f, 0.4f, 0.9f);       // Coral Red
+    private static readonly Color WARNING_COLOR = new Color(1.0f, 0.75f, 0.1f, 0.9f);    // Golden Orange
+    private static readonly Color INFO_COLOR = new Color(0.2f, 0.7f, 1.0f, 0.9f);        // Cyan
+    private static readonly Color USER_MESSAGE_BG = new Color(0.15f, 0.5f, 0.95f, 0.25f); // User Blue Glass
+    private static readonly Color AI_MESSAGE_BG = new Color(0.25f, 0.35f, 0.6f, 0.3f);   // AI Purple Glass
+    private static readonly Color ERROR_MESSAGE_BG = new Color(1.0f, 0.2f, 0.4f, 0.25f); // Error Glass
+    private static readonly Color ACCENT_CYAN = new Color(0.0f, 0.95f, 1.0f, 1.0f);      // Pure Cyan
+    private static readonly Color ACCENT_PURPLE = new Color(0.7f, 0.3f, 1.0f, 1.0f);     // Vibrant Purple
 
     // Styles
     private GUIStyle _headerStyle;
@@ -74,39 +79,42 @@ public class KurdostAIMainWindow : EditorWindow
     {
         _headerStyle = new GUIStyle(EditorStyles.boldLabel)
         {
-            fontSize = 20,
+            fontSize = 22,
             fontStyle = FontStyle.Bold,
             alignment = TextAnchor.MiddleCenter,
-            padding = new RectOffset(10, 10, 18, 18),
-            normal = { textColor = Color.white },
-            hover = { textColor = Color.white }
+            padding = new RectOffset(10, 10, 20, 20),
+            normal = { textColor = new Color(0.9f, 1.0f, 1.0f, 1.0f) },
+            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) }
         };
 
         _tabStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 12,
+            fontSize = 13,
             fontStyle = FontStyle.Bold,
-            padding = new RectOffset(18, 18, 10, 10),
-            margin = new RectOffset(2, 2, 2, 2),
-            normal = { textColor = Color.white },
-            hover = { textColor = Color.white }
+            padding = new RectOffset(16, 16, 12, 12),
+            margin = new RectOffset(4, 4, 4, 4),
+            border = new RectOffset(8, 8, 8, 8),
+            normal = { textColor = new Color(0.85f, 0.9f, 1.0f, 0.9f) },
+            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) }
         };
 
         _sectionStyle = new GUIStyle(GUI.skin.box)
         {
-            padding = new RectOffset(16, 16, 16, 16),
+            padding = new RectOffset(18, 18, 18, 18),
             margin = new RectOffset(8, 8, 8, 8),
-            normal = { background = MakeTexture(2, 2, SECTION_BG) }
+            border = new RectOffset(1, 1, 1, 1),
+            normal = { background = MakeGlassTexture(2, 2, SECTION_BG) }
         };
 
         _buttonStyle = new GUIStyle(GUI.skin.button)
         {
-            fontSize = 13,
+            fontSize = 14,
             fontStyle = FontStyle.Bold,
-            padding = new RectOffset(14, 14, 10, 10),
-            fixedHeight = 38,
-            normal = { textColor = Color.white },
-            hover = { textColor = Color.white }
+            padding = new RectOffset(16, 16, 12, 12),
+            fixedHeight = 42,
+            normal = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) },
+            hover = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) },
+            active = { textColor = new Color(0.9f, 0.95f, 1.0f, 1.0f) }
         };
 
         _messageStyle = new GUIStyle(EditorStyles.wordWrappedLabel)
@@ -114,37 +122,50 @@ public class KurdostAIMainWindow : EditorWindow
             fontSize = 13,
             padding = new RectOffset(16, 16, 12, 12),
             wordWrap = true,
-            richText = true
+            richText = true,
+            normal = { textColor = new Color(0.95f, 0.95f, 1.0f, 1.0f) }
         };
 
         _userMessageStyle = new GUIStyle(_messageStyle)
         {
-            normal = { background = MakeTexture(2, 2, USER_MESSAGE_BG) }
+            normal = { background = MakeGlassTexture(2, 2, USER_MESSAGE_BG) }
         };
 
         _aiMessageStyle = new GUIStyle(_messageStyle)
         {
-            normal = { background = MakeTexture(2, 2, AI_MESSAGE_BG) }
+            normal = { background = MakeGlassTexture(2, 2, AI_MESSAGE_BG) }
         };
 
         _errorMessageStyle = new GUIStyle(_messageStyle)
         {
-            normal = { background = MakeTexture(2, 2, ERROR_MESSAGE_BG) }
+            normal = { 
+                background = MakeGlassTexture(2, 2, ERROR_MESSAGE_BG),
+                textColor = new Color(1.0f, 0.95f, 0.95f, 1.0f)
+            }
         };
 
         _inputStyle = new GUIStyle(EditorStyles.textArea)
         {
             fontSize = 13,
-            padding = new RectOffset(12, 12, 10, 10),
+            padding = new RectOffset(14, 14, 12, 12),
             wordWrap = true,
-            richText = true
+            richText = true,
+            normal = { 
+                background = MakeGlassTexture(2, 2, INPUT_BG),
+                textColor = Color.black
+            },
+            focused = {
+                background = MakeGlassTexture(2, 2, INPUT_BG),
+                textColor = Color.black
+            }
         };
 
         _labelStyle = new GUIStyle(EditorStyles.label)
         {
             fontSize = 12,
             fontStyle = FontStyle.Bold,
-            padding = new RectOffset(0, 0, 4, 4)
+            padding = new RectOffset(0, 0, 4, 4),
+            normal = { textColor = new Color(0.85f, 0.95f, 1.0f, 0.95f) }
         };
     }
 
@@ -154,6 +175,24 @@ public class KurdostAIMainWindow : EditorWindow
         for (int i = 0; i < pixels.Length; i++)
         {
             pixels[i] = color;
+        }
+
+        Texture2D texture = new Texture2D(width, height);
+        texture.SetPixels(pixels);
+        texture.Apply();
+        return texture;
+    }
+
+    private Texture2D MakeGlassTexture(int width, int height, Color baseColor)
+    {
+        // Create a glass effect texture with gradient
+        Color[] pixels = new Color[width * height];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            float t = (float)i / pixels.Length;
+            // Add subtle gradient and white overlay for glass effect
+            Color glassColor = Color.Lerp(baseColor, baseColor + GLASS_OVERLAY, 0.3f);
+            pixels[i] = glassColor;
         }
 
         Texture2D texture = new Texture2D(width, height);
@@ -306,12 +345,14 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawGradientHeader()
     {
-        using (new EditorGUILayout.HorizontalScope())
-        {
-            GUI.backgroundColor = HEADER_COLOR;
-            EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(40));
-            GUI.backgroundColor = Color.white;
-        }
+        EditorGUILayout.Space(5);
+        
+        // Draw header with gradient colors
+        GUI.backgroundColor = GRADIENT_START;
+        EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(55));
+        GUI.backgroundColor = Color.white;
+        
+        EditorGUILayout.Space(5);
     }
 
     private void DrawTabs()
@@ -322,7 +363,7 @@ public class KurdostAIMainWindow : EditorWindow
             {
                 GUI.backgroundColor = _selectedTab == i ? TAB_ACTIVE : TAB_INACTIVE;
 
-                if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(30)))
+                if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(40)))
                 {
                     _selectedTab = i;
                 }
@@ -330,6 +371,8 @@ public class KurdostAIMainWindow : EditorWindow
                 GUI.backgroundColor = Color.white;
             }
         }
+        
+        EditorGUILayout.Space(8);
     }
 
     private void DrawAuthenticationPanel()
@@ -338,8 +381,9 @@ public class KurdostAIMainWindow : EditorWindow
 
         using (new EditorGUILayout.VerticalScope())
         {
-            GUI.backgroundColor = ERROR_COLOR;
-            EditorGUILayout.LabelField("🔐 Authentication Required", _headerStyle, GUILayout.Height(50));
+            // Header
+            GUI.backgroundColor = new Color(0.2f, 0.3f, 0.6f, 0.8f);
+            EditorGUILayout.LabelField("🔐 Authentication Required", _headerStyle, GUILayout.Height(60));
             GUI.backgroundColor = Color.white;
 
             EditorGUILayout.Space(30);
@@ -356,11 +400,15 @@ public class KurdostAIMainWindow : EditorWindow
 
                 EditorGUILayout.Space(20);
 
-                EditorGUILayout.LabelField("API Key:", EditorStyles.label);
-                _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput);
+                EditorGUILayout.LabelField("API Key:", _labelStyle);
+                GUI.backgroundColor = INPUT_BG;
+                _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput, GUILayout.Height(32));
+                GUI.backgroundColor = Color.white;
 
-                EditorGUILayout.Space(10);
+                EditorGUILayout.Space(15);
 
+                // Active button color
+                GUI.backgroundColor = new Color(0.1f, 0.95f, 0.4f, 0.9f);
                 if (GUILayout.Button(new GUIContent("💾 Save API Key", "Save your Groq API key"), _buttonStyle))
                 {
                     if (!string.IsNullOrEmpty(_apiKeyInput))
@@ -374,13 +422,16 @@ public class KurdostAIMainWindow : EditorWindow
                         EditorUtility.DisplayDialog("❌ Error", "Please enter an API key", "OK");
                     }
                 }
+                GUI.backgroundColor = Color.white;
 
-                EditorGUILayout.Space(10);
+                EditorGUILayout.Space(12);
 
-                if (GUILayout.Button(new GUIContent("🔗 Get Free API Key ↗", "Open Groq Console to get a free API key"), GUILayout.Height(30)))
+                GUI.backgroundColor = INFO_COLOR;
+                if (GUILayout.Button(new GUIContent("🔗 Get Free API Key ↗", "Open Groq Console to get a free API key"), _buttonStyle))
                 {
                     Application.OpenURL("https://console.groq.com/keys");
                 }
+                GUI.backgroundColor = Color.white;
             }
         }
     }
@@ -400,11 +451,11 @@ public class KurdostAIMainWindow : EditorWindow
                 {
                     GUILayout.FlexibleSpace();
                     
-                    GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.15f);
+                    GUI.backgroundColor = new Color(0.0f, 0.7f, 1.0f, 0.2f);
                     EditorGUILayout.LabelField(
                         "🚀 Start a conversation\n\nType your message below and press Enter to chat with Kurdost AI",
                         _messageStyle,
-                        GUILayout.Height(80)
+                        GUILayout.Height(85)
                     );
                     GUI.backgroundColor = Color.white;
                     
@@ -416,7 +467,7 @@ public class KurdostAIMainWindow : EditorWindow
                 foreach (var msg in _chatHistory)
                 {
                     DrawChatMessage(msg);
-                    EditorGUILayout.Space(8);
+                    EditorGUILayout.Space(10);
                 }
             }
 
@@ -432,17 +483,21 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void DrawChatInputArea()
     {
-        EditorGUILayout.Space(12);
+        EditorGUILayout.Space(15);
 
         EditorGUILayout.LabelField("✍️ Your Message:", _labelStyle);
+        EditorGUILayout.Space(8);
+        
         GUI.backgroundColor = INPUT_BG;
-        _userMessage = EditorGUILayout.TextArea(_userMessage, _inputStyle, GUILayout.Height(85));
+        _userMessage = EditorGUILayout.TextArea(_userMessage, _inputStyle, GUILayout.Height(100));
         GUI.backgroundColor = Color.white;
 
-        EditorGUILayout.Space(12);
+        EditorGUILayout.Space(15);
 
         using (new EditorGUILayout.HorizontalScope())
         {
+            // Send button with cyan color
+            GUI.backgroundColor = new Color(0.0f, 0.85f, 1.0f, 0.9f);
             if (GUILayout.Button(new GUIContent("🚀 Send Message", "Send message (Enter)"), _buttonStyle))
             {
                 if (!string.IsNullOrEmpty(_userMessage))
@@ -450,12 +505,18 @@ public class KurdostAIMainWindow : EditorWindow
                     SendChatMessage();
                 }
             }
+            GUI.backgroundColor = Color.white;
 
+            // Export button with purple
+            GUI.backgroundColor = ACCENT_PURPLE;
             if (GUILayout.Button(new GUIContent("📤 Export", "Export chat history (Ctrl+E)"), _buttonStyle))
             {
                 ExportChatHistory();
             }
+            GUI.backgroundColor = Color.white;
 
+            // Clear button with red/pink
+            GUI.backgroundColor = ERROR_COLOR;
             if (GUILayout.Button(new GUIContent("🗑️ Clear", "Clear chat (Ctrl+N)"), _buttonStyle))
             {
                 if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
@@ -465,7 +526,10 @@ public class KurdostAIMainWindow : EditorWindow
                     ShowNotification("Chat cleared", NotificationType.Info);
                 }
             }
+            GUI.backgroundColor = Color.white;
         }
+
+        EditorGUILayout.Space(12);
     }
 
     private void DrawLoadingIndicator()
@@ -475,21 +539,21 @@ public class KurdostAIMainWindow : EditorWindow
             GUILayout.FlexibleSpace();
 
             // Animated loading dots with smooth transition
-            float animationSpeed = 0.05f;
+            float animationSpeed = 0.06f;
             _animationProgress += animationSpeed;
             if (_animationProgress > 1f)
                 _animationProgress = 0f;
 
-            string[] dots = { ".", "..", "...", "...." };
+            string[] dots = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" };
             int dotIndex = (int)(_animationProgress * dots.Length * 2) % dots.Length;
-            string loadingText = "Loading" + dots[dotIndex];
+            string loadingText = "Loading " + dots[dotIndex];
 
-            // Pulsing color effect
-            float pulse = Mathf.Sin(_animationProgress * Mathf.PI * 2) * 0.3f + 0.7f;
-            Color pulsingColor = new Color(0.2f, 0.6f, 1.0f, pulse);
+            // Pulsing color effect with cyan
+            float pulse = Mathf.Sin(_animationProgress * Mathf.PI * 2) * 0.4f + 0.6f;
+            Color pulsingColor = new Color(0.0f, 0.85f * pulse, 1.0f * pulse, 1.0f);
 
             GUI.backgroundColor = pulsingColor;
-            EditorGUILayout.LabelField(loadingText, _headerStyle, GUILayout.Width(120));
+            EditorGUILayout.LabelField(loadingText, _headerStyle, GUILayout.Width(150));
             GUI.backgroundColor = Color.white;
 
             GUILayout.FlexibleSpace();
@@ -502,23 +566,27 @@ public class KurdostAIMainWindow : EditorWindow
     {
         using (new EditorGUILayout.VerticalScope())
         {
-            EditorGUILayout.Space(8);
+            EditorGUILayout.Space(6);
 
             // Header with timestamp and action buttons
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (msg.IsUser)
                 {
-                    EditorGUILayout.LabelField("👤 You", _labelStyle, GUILayout.Width(60));
+                    GUI.backgroundColor = new Color(0.0f, 0.7f, 1.0f, 0.7f);
+                    EditorGUILayout.LabelField("👤 You", _labelStyle, GUILayout.Width(80));
+                    GUI.backgroundColor = Color.white;
                 }
                 else
                 {
-                    EditorGUILayout.LabelField(msg.IsError ? "❌ Error" : "🤖 AI", _labelStyle, GUILayout.Width(60));
+                    GUI.backgroundColor = msg.IsError ? ERROR_COLOR : new Color(0.6f, 0.3f, 1.0f, 0.7f);
+                    EditorGUILayout.LabelField(msg.IsError ? "❌ Error" : "🤖 AI", _labelStyle, GUILayout.Width(80));
+                    GUI.backgroundColor = Color.white;
                 }
 
                 if (!string.IsNullOrEmpty(msg.Timestamp))
                 {
-                    EditorGUILayout.LabelField(msg.Timestamp, EditorStyles.miniLabel, GUILayout.Width(60));
+                    EditorGUILayout.LabelField(msg.Timestamp, EditorStyles.miniLabel, GUILayout.Width(80));
                 }
 
                 GUILayout.FlexibleSpace();
@@ -526,29 +594,37 @@ public class KurdostAIMainWindow : EditorWindow
                 // Retry button for error messages
                 if (msg.IsError && !string.IsNullOrEmpty(msg.OriginalMessage))
                 {
-                    if (GUILayout.Button("🔄", GUILayout.Width(28), GUILayout.Height(24)))
+                    GUI.backgroundColor = WARNING_COLOR;
+                    if (GUILayout.Button("🔄", GUILayout.Width(30), GUILayout.Height(26)))
                     {
                         RetryMessage(msg.OriginalMessage);
                         return;
                     }
+                    GUI.backgroundColor = Color.white;
                 }
 
                 // Copy button
-                if (GUILayout.Button("📋", GUILayout.Width(28), GUILayout.Height(24)))
+                GUI.backgroundColor = INFO_COLOR;
+                if (GUILayout.Button("📋", GUILayout.Width(30), GUILayout.Height(26)))
                 {
                     GUIUtility.systemCopyBuffer = msg.Content;
                     ShowNotification("Message copied to clipboard", NotificationType.Success);
                 }
+                GUI.backgroundColor = Color.white;
 
                 // Delete button
-                if (GUILayout.Button("🗑️", GUILayout.Width(28), GUILayout.Height(24)))
+                GUI.backgroundColor = ERROR_COLOR;
+                if (GUILayout.Button("🗑️", GUILayout.Width(30), GUILayout.Height(26)))
                 {
                     _chatHistory.Remove(msg);
                     ShowNotification("Message deleted", NotificationType.Info);
                     Repaint();
                     return;
                 }
+                GUI.backgroundColor = Color.white;
             }
+
+            EditorGUILayout.Space(4);
 
             // Message content with word wrap and proper styling
             GUIStyle messageStyle;
@@ -569,8 +645,8 @@ public class KurdostAIMainWindow : EditorWindow
             string displayContent = msg.IsUser ? msg.Content : ParseMarkdown(msg.Content);
             
             // Calculate required height for the message
-            float contentHeight = messageStyle.CalcHeight(new GUIContent(displayContent), position.width - 80);
-            float minHeight = Mathf.Max(40, contentHeight);
+            float contentHeight = messageStyle.CalcHeight(new GUIContent(displayContent), position.width - 100);
+            float minHeight = Mathf.Max(45, contentHeight);
             
             EditorGUILayout.LabelField(displayContent, messageStyle, GUILayout.Height(minHeight));
         }
@@ -825,28 +901,34 @@ public class KurdostAIMainWindow : EditorWindow
             EditorGUILayout.LabelField("⚡ Quick Actions:", _labelStyle);
             EditorGUILayout.Space(12);
 
+            GUI.backgroundColor = new Color(0.0f, 0.85f, 1.0f, 0.9f);
             if (GUILayout.Button(new GUIContent("📝 Analyze Selected Script", "Analyze the selected C# script for code quality and improvements"), _buttonStyle))
             {
                 AnalyzeSelectedScript();
             }
+            GUI.backgroundColor = Color.white;
 
-            EditorGUILayout.Space(8);
+            EditorGUILayout.Space(10);
 
+            GUI.backgroundColor = WARNING_COLOR;
             if (GUILayout.Button(new GUIContent("🐛 Fix Console Errors", "Analyze and provide fixes for console errors"), _buttonStyle))
             {
                 FixConsoleErrors();
             }
+            GUI.backgroundColor = Color.white;
 
-            EditorGUILayout.Space(8);
+            EditorGUILayout.Space(10);
 
+            GUI.backgroundColor = SUCCESS_COLOR;
             if (GUILayout.Button(new GUIContent("✨ Generate Script", "Generate a new Unity script with AI assistance"), _buttonStyle))
             {
                 GenerateScript();
             }
+            GUI.backgroundColor = Color.white;
 
             EditorGUILayout.Space(16);
             
-            GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.15f);
+            GUI.backgroundColor = new Color(0.15f, 0.45f, 0.85f, 0.25f);
             EditorGUILayout.HelpBox("💡 Tip: Select a script in the Project view to analyze it", MessageType.Info);
             GUI.backgroundColor = Color.white;
         }
@@ -1004,8 +1086,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Provider Selection
             EditorGUILayout.LabelField("🌐 Provider", _labelStyle);
             string[] providers = { "groq", "gemini" };
-            int currentProviderIndex = Array.IndexOf(providers, EditorPrefs.GetString("KurdostAI_Provider", "groq"));
+            int currentProviderIndex = System.Array.IndexOf(providers, EditorPrefs.GetString("KurdostAI_Provider", "groq"));
+            GUI.backgroundColor = new Color(0.2f, 0.6f, 1.0f, 0.7f);
             int newProviderIndex = EditorGUILayout.Popup(currentProviderIndex, providers);
+            GUI.backgroundColor = Color.white;
             if (newProviderIndex != currentProviderIndex)
             {
                 if (EditorUtility.DisplayDialog("Change Provider", $"Change provider from {providers[currentProviderIndex]} to {providers[newProviderIndex]}?", "Yes", "No"))
@@ -1021,8 +1105,10 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Model Selection
             EditorGUILayout.LabelField("🤖 Model", _labelStyle);
             string[] models = { "llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768" };
-            int currentModelIndex = Array.IndexOf(models, EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant"));
+            int currentModelIndex = System.Array.IndexOf(models, EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant"));
+            GUI.backgroundColor = new Color(0.6f, 0.3f, 1.0f, 0.7f);
             int newModelIndex = EditorGUILayout.Popup(currentModelIndex, models);
+            GUI.backgroundColor = Color.white;
             if (newModelIndex != currentModelIndex)
             {
                 if (EditorUtility.DisplayDialog("Change Model", $"Change model from {models[currentModelIndex]} to {models[newModelIndex]}?", "Yes", "No"))
@@ -1038,7 +1124,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Temperature Control
             EditorGUILayout.LabelField("🌡️ Temperature", _labelStyle);
             float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
+            GUI.backgroundColor = new Color(1.0f, 0.6f, 0.2f, 0.6f);
             float newTemperature = EditorGUILayout.Slider(temperature, 0.0f, 2.0f);
+            GUI.backgroundColor = Color.white;
             if (Mathf.Abs(newTemperature - temperature) > 0.01f)
             {
                 EditorPrefs.SetFloat("KurdostAI_Temperature", newTemperature);
@@ -1050,7 +1138,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Max Tokens Control
             EditorGUILayout.LabelField("📊 Max Tokens", _labelStyle);
             int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
+            GUI.backgroundColor = new Color(0.2f, 0.85f, 0.6f, 0.6f);
             int newMaxTokens = EditorGUILayout.IntSlider(maxTokens, 100, 4000);
+            GUI.backgroundColor = Color.white;
             if (newMaxTokens != maxTokens)
             {
                 EditorPrefs.SetInt("KurdostAI_MaxTokens", newMaxTokens);
@@ -1062,7 +1152,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Custom Server URL
             EditorGUILayout.LabelField("🌍 Server URL", _labelStyle);
             string serverUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
+            GUI.backgroundColor = INPUT_BG;
             string newServerUrl = EditorGUILayout.TextField(serverUrl);
+            GUI.backgroundColor = Color.white;
             if (newServerUrl != serverUrl)
             {
                 EditorPrefs.SetString("KurdostAI_ServerUrl", newServerUrl);
@@ -1085,7 +1177,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Language Preference
             EditorGUILayout.LabelField("🌐 Language", _labelStyle);
             _selectedLanguage = EditorPrefs.GetInt("KurdostAI_Language", 0);
+            GUI.backgroundColor = new Color(0.2f, 0.7f, 1.0f, 0.6f);
             int newLanguage = EditorGUILayout.Popup(_selectedLanguage, _languages);
+            GUI.backgroundColor = Color.white;
             if (newLanguage != _selectedLanguage)
             {
                 _selectedLanguage = newLanguage;
@@ -1098,7 +1192,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             // Theme Selection
             EditorGUILayout.LabelField("🎨 Theme", _labelStyle);
             _selectedTheme = EditorPrefs.GetInt("KurdostAI_Theme", 0);
+            GUI.backgroundColor = ACCENT_PURPLE;
             int newTheme = EditorGUILayout.Popup(_selectedTheme, _themes);
+            GUI.backgroundColor = Color.white;
             if (newTheme != _selectedTheme)
             {
                 _selectedTheme = newTheme;
@@ -1110,10 +1206,13 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             EditorGUILayout.Space(16);
 
             EditorGUILayout.LabelField("🔐 Change API Key", _labelStyle);
-            _settingsApiKeyInput = EditorGUILayout.PasswordField(_settingsApiKeyInput);
+            GUI.backgroundColor = INPUT_BG;
+            _settingsApiKeyInput = EditorGUILayout.PasswordField(_settingsApiKeyInput, GUILayout.Height(32));
+            GUI.backgroundColor = Color.white;
 
             using (new EditorGUILayout.HorizontalScope())
             {
+                GUI.backgroundColor = SUCCESS_COLOR;
                 if (GUILayout.Button(new GUIContent("💾 Save New Key", "Save your new API key"), _buttonStyle))
                 {
                     if (!string.IsNullOrEmpty(_settingsApiKeyInput))
@@ -1129,7 +1228,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                         EditorUtility.DisplayDialog("❌ Error", "Please enter an API key", "OK");
                     }
                 }
+                GUI.backgroundColor = Color.white;
 
+                GUI.backgroundColor = ERROR_COLOR;
                 if (GUILayout.Button(new GUIContent("🚪 Logout", "Remove API key and logout"), _buttonStyle))
                 {
                     if (EditorUtility.DisplayDialog("Logout", "Remove API key?", "Yes", "No"))
@@ -1140,21 +1241,26 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                         Repaint();
                     }
                 }
+                GUI.backgroundColor = Color.white;
             }
 
             EditorGUILayout.Space(16);
 
+            GUI.backgroundColor = INFO_COLOR;
             if (GUILayout.Button(new GUIContent("🔗 Open Groq Console", "Get your API key from Groq Console"), _buttonStyle))
             {
                 Application.OpenURL("https://console.groq.com/keys");
             }
+            GUI.backgroundColor = Color.white;
 
             EditorGUILayout.Space(8);
 
+            GUI.backgroundColor = new Color(0.2f, 0.6f, 1.0f, 0.9f);
             if (GUILayout.Button(new GUIContent("📂 Open Repository", "View the project on GitHub"), _buttonStyle))
             {
                 Application.OpenURL("https://github.com/kurdostkozer-bit/kurdost-ai");
             }
+            GUI.backgroundColor = Color.white;
         }
     }
 
@@ -1204,16 +1310,16 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         if (_notifications.Count == 0)
             return;
 
-        float notificationWidth = 300f;
-        float notificationHeight = 60f;
-        float spacing = 10f;
-        float startY = 10f;
+        float notificationWidth = 320f;
+        float notificationHeight = 65f;
+        float spacing = 12f;
+        float startY = 15f;
 
         for (int i = 0; i < _notifications.Count; i++)
         {
             var notification = _notifications[i];
             Rect notificationRect = new Rect(
-                position.width - notificationWidth - 10f,
+                position.width - notificationWidth - 15f,
                 startY + (i * (notificationHeight + spacing)),
                 notificationWidth,
                 notificationHeight
@@ -1229,22 +1335,31 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                     bgColor = ERROR_COLOR;
                     break;
                 case NotificationType.Warning:
-                    bgColor = new Color(1.0f, 0.8f, 0.2f, 1.0f);
+                    bgColor = WARNING_COLOR;
                     break;
                 default:
-                    bgColor = new Color(0.2f, 0.6f, 1.0f, 1.0f);
+                    bgColor = INFO_COLOR;
                     break;
             }
 
-            GUI.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, 0.9f);
+            // Draw notification box with glass effect
+            GUI.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, 0.85f);
             GUI.Box(notificationRect, "");
             GUI.backgroundColor = Color.white;
+
+            // Glass overlay
+            GUI.color = new Color(1, 1, 1, 0.15f);
+            GUI.Box(notificationRect, "");
+            GUI.color = Color.white;
 
             GUIStyle notificationStyle = new GUIStyle(EditorStyles.label)
             {
                 alignment = TextAnchor.MiddleLeft,
-                padding = new RectOffset(10, 10, 10, 10),
-                wordWrap = true
+                padding = new RectOffset(15, 15, 12, 12),
+                wordWrap = true,
+                fontStyle = FontStyle.Bold,
+                fontSize = 12,
+                normal = { textColor = new Color(1.0f, 1.0f, 1.0f, 1.0f) }
             };
 
             GUI.Label(notificationRect, notification.Message, notificationStyle);
