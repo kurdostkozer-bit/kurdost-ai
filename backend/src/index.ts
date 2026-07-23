@@ -47,6 +47,8 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     const { provider, messages, model, temperature, max_tokens } = req.body;
     const apiKey = req.headers['x-api-key'] as string;
 
+    console.log('📥 Request received:', { provider, messagesCount: messages?.length, model, temperature, max_tokens, hasApiKey: !!apiKey });
+
     if (!provider) {
       return res.status(400).json({ error: 'Provider is required' });
     }
@@ -64,12 +66,16 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     }
 
     if (!effectiveApiKey) {
+      console.error('❌ No API key available');
       return res.status(400).json({ error: 'API key is required (either in header or environment variable)' });
     }
+
+    console.log(`🔑 Using API key from: ${apiKey ? 'header' : 'environment'}`);
 
     // Temporarily override the provider's API key with the one from request
     const tempToolkit = new AIToolkit();
     if (provider === 'groq') {
+      console.log(`📝 Registering Groq provider with model: ${model}, temperature: ${temperature}, maxTokens: ${max_tokens}`);
       tempToolkit.registerProvider('groq', new GroqProvider({
         apiKey: effectiveApiKey,
         model: model || 'llama-3.1-8b-instant',
@@ -78,9 +84,12 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       }));
     } else if (provider === 'gemini') {
       tempToolkit.registerProvider('gemini', new GeminiProvider({ apiKey: effectiveApiKey }));
+    } else {
+      console.error(`❌ Unknown provider: ${provider}`);
+      return res.status(400).json({ error: `Unknown provider: ${provider}` });
     }
 
-    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}, apiKeySource=${apiKey ? 'header' : 'env'}`);
+    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}`);
 
     const response = await tempToolkit.sendMessage(provider, messages);
 
@@ -92,6 +101,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('❌ Chat error:', error.message);
+    console.error('❌ Error stack:', error.stack);
     console.error('❌ Error details:', error);
     res.status(500).json({
       success: false,
