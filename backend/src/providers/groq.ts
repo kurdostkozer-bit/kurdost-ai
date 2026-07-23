@@ -12,7 +12,7 @@ export class GroqProvider {
 
   constructor(config: GroqConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model || 'llama-3.1-8b-instant';
+    this.model = config.model || 'llama-3.1-70b-versatile';
   }
 
   async send(messages: Array<{ role: string; content: string }>): Promise<string> {
