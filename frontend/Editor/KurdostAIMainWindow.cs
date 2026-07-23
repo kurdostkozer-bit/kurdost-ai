@@ -13,6 +13,13 @@ public class KurdostAIMainWindow : EditorWindow
     private string _settingsApiKeyInput = "";
     private int _selectedTab = 0;
     private List<ChatMessage> _chatHistory = new List<ChatMessage>();
+    private bool _autoScroll = true;
+    private bool _isLoading = false;
+    private int _loadingFrame = 0;
+    private string[] _languages = { "English", "Arabic" };
+    private int _selectedLanguage = 0;
+    private string[] _themes = { "Dark", "Light" };
+    private int _selectedTheme = 0;
 
     // Colors
     private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
@@ -83,6 +90,13 @@ public class KurdostAIMainWindow : EditorWindow
         if (_headerStyle == null)
         {
             InitializeStyles();
+        }
+
+        // Update loading animation
+        if (_isLoading)
+        {
+            _loadingFrame++;
+            Repaint();
         }
 
         bool isAuthenticated = EditorPrefs.HasKey("KurdostAI_ApiKey");
@@ -223,6 +237,12 @@ public class KurdostAIMainWindow : EditorWindow
                 }
             }
 
+            // Loading indicator
+            if (_isLoading)
+            {
+                DrawLoadingIndicator();
+            }
+
             EditorGUILayout.EndScrollView();
         }
 
@@ -245,36 +265,137 @@ public class KurdostAIMainWindow : EditorWindow
                 }
             }
 
+            if (GUILayout.Button("📤 Export", GUILayout.Height(35)))
+            {
+                ExportChatHistory();
+            }
+
             if (GUILayout.Button("Clear", GUILayout.Height(35)))
             {
-                _userMessage = "";
-                _chatHistory.Clear();
+                if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
+                {
+                    _userMessage = "";
+                    _chatHistory.Clear();
+                }
             }
         }
     }
 
+    private void DrawLoadingIndicator()
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            GUILayout.FlexibleSpace();
+
+            string[] dots = { ".", "..", "...", "...." };
+            int dotIndex = (_loadingFrame / 10) % dots.Length;
+            string loadingText = "Loading" + dots[dotIndex];
+
+            GUI.backgroundColor = new Color(0.2f, 0.6f, 1.0f, 0.5f);
+            EditorGUILayout.LabelField(loadingText, EditorStyles.boldLabel, GUILayout.Width(100));
+            GUI.backgroundColor = Color.white;
+
+            GUILayout.FlexibleSpace();
+        }
+
+        EditorGUILayout.Space(10);
+    }
+
     private void DrawChatMessage(ChatMessage msg)
     {
-        if (msg.IsUser)
+        using (new EditorGUILayout.VerticalScope())
         {
-            using (new EditorGUILayout.VerticalScope())
+            EditorGUILayout.Space(5);
+
+            // Header with timestamp and action buttons
+            using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.Space(5);
+                if (msg.IsUser)
+                {
+                    EditorGUILayout.LabelField("👤 You", EditorStyles.boldLabel, GUILayout.Width(50));
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(msg.IsError ? "❌ Error" : "🤖 AI", EditorStyles.boldLabel, GUILayout.Width(50));
+                }
+
+                if (!string.IsNullOrEmpty(msg.Timestamp))
+                {
+                    EditorGUILayout.LabelField(msg.Timestamp, EditorStyles.miniLabel, GUILayout.Width(50));
+                }
+
+                GUILayout.FlexibleSpace();
+
+                // Retry button for error messages
+                if (msg.IsError && !string.IsNullOrEmpty(msg.OriginalMessage))
+                {
+                    if (GUILayout.Button("🔄", GUILayout.Width(25), GUILayout.Height(20)))
+                    {
+                        RetryMessage(msg.OriginalMessage);
+                        return;
+                    }
+                }
+
+                // Copy button
+                if (GUILayout.Button("📋", GUILayout.Width(25), GUILayout.Height(20)))
+                {
+                    GUIUtility.systemCopyBuffer = msg.Content;
+                    Debug.Log("[KurdostAI] Message copied to clipboard");
+                }
+
+                // Delete button
+                if (GUILayout.Button("🗑️", GUILayout.Width(25), GUILayout.Height(20)))
+                {
+                    _chatHistory.Remove(msg);
+                    Repaint();
+                    return;
+                }
+            }
+
+            // Message content with markdown support
+            if (msg.IsUser)
+            {
                 GUI.backgroundColor = new Color(0.2f, 0.5f, 0.8f, 0.3f);
-                EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
-                GUI.backgroundColor = Color.white;
             }
-        }
-        else
-        {
-            using (new EditorGUILayout.VerticalScope())
+            else if (msg.IsError)
             {
-                EditorGUILayout.Space(5);
-                GUI.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
-                EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
-                GUI.backgroundColor = Color.white;
+                GUI.backgroundColor = new Color(1.0f, 0.3f, 0.3f, 0.3f);
             }
+            else
+            {
+                GUI.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
+            }
+
+            // Parse and display markdown for AI messages
+            string displayContent = msg.IsUser ? msg.Content : ParseMarkdown(msg.Content);
+            EditorGUILayout.TextArea(displayContent, EditorStyles.helpBox, GUILayout.MinHeight(40));
+            GUI.backgroundColor = Color.white;
         }
+    }
+
+    private string ParseMarkdown(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        string result = text;
+
+        // Code blocks ```code```
+        result = System.Text.RegularExpressions.Regex.Replace(result, @"```([^`]+)```", "📦 $1");
+
+        // Inline code `code`
+        result = System.Text.RegularExpressions.Regex.Replace(result, @"`([^`]+)`", "🔹 $1");
+
+        // Bold **text**
+        result = System.Text.RegularExpressions.Regex.Replace(result, @"\*\*([^*]+)\*\*", "★ $1 ★");
+
+        // Italic *text*
+        result = System.Text.RegularExpressions.Regex.Replace(result, @"\*()\*", "» $1 «");
+
+        // Headers # text
+        result = System.Text.RegularExpressions.Regex.Replace(result, @"^#+\s+(.+)$", "▶ $1", System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        return result;
     }
 
     private void SendChatMessage()
@@ -282,12 +403,20 @@ public class KurdostAIMainWindow : EditorWindow
         if (string.IsNullOrEmpty(_userMessage))
             return;
 
-        _chatHistory.Add(new ChatMessage { Content = _userMessage, IsUser = true });
+        _chatHistory.Add(new ChatMessage { Content = _userMessage, IsUser = true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
 
         string userMsg = _userMessage;
         _userMessage = "";
 
-        _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false });
+        _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = userMsg });
+
+        _isLoading = true;
+        _loadingFrame = 0;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
 
         Repaint();
 
@@ -302,9 +431,12 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void SendToBackend(string message)
     {
-        string apiUrl = "https://kurdost-ai-backend.onrender.com/api/v1/chat";
+        string apiUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
         string apiKey = EditorPrefs.GetString("KurdostAI_ApiKey", "");
         string provider = EditorPrefs.GetString("KurdostAI_Provider", "groq");
+        string model = EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant");
+        float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
+        int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
 
         if (string.IsNullOrEmpty(apiKey))
         {
@@ -314,7 +446,7 @@ public class KurdostAIMainWindow : EditorWindow
 
         // Manually construct JSON to avoid JsonUtility limitations
         string escapedMessage = message.Replace("\"", "\\\"");
-        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}]}}";
+        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}],\"model\":\"{model}\",\"temperature\":{temperature:F1},\"max_tokens\":{maxTokens}}}";
         Debug.Log($"[KurdostAI] Request body: {jsonBody}");
 
         _currentRequest = new UnityWebRequest(apiUrl, "POST");
@@ -401,9 +533,81 @@ public class KurdostAIMainWindow : EditorWindow
             _chatHistory.RemoveAt(_chatHistory.Count - 1);
         }
 
-        _chatHistory.Add(new ChatMessage { Content = response, IsUser = false });
+        _chatHistory.Add(new ChatMessage { Content = response, IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), IsError = isError });
+
+        _isLoading = false;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
 
         Repaint();
+    }
+
+    private void RetryMessage(string originalMessage)
+    {
+        _chatHistory.Add(new ChatMessage { Content = "Retrying...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = originalMessage });
+
+        _isLoading = true;
+        _loadingFrame = 0;
+
+        if (_autoScroll)
+        {
+            _chatScrollPosition = new Vector2(_chatScrollPosition.x, float.MaxValue);
+        }
+
+        Repaint();
+
+        SendToBackendCoroutine(originalMessage);
+    }
+
+    private void ExportChatHistory()
+    {
+        if (_chatHistory.Count == 0)
+        {
+            EditorUtility.DisplayDialog("Export", "No messages to export", "OK");
+            return;
+        }
+
+        string path = EditorUtility.SaveFilePanel("Export Chat History", "", "kurdost_chat", "json");
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        try
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.AppendLine("{");
+            sb.AppendLine($"  \"exportDate\": \"{System.DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}\",");
+            sb.AppendLine($"  \"messageCount\": {_chatHistory.Count},");
+            sb.AppendLine("  \"messages\": [");
+
+            for (int i = 0; i < _chatHistory.Count; i++)
+            {
+                var msg = _chatHistory[i];
+                string escapedContent = msg.Content.Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+                sb.AppendLine("    {");
+                sb.AppendLine($"      \"content\": \"{escapedContent}\",");
+                sb.AppendLine($"      \"isUser\": {msg.IsUser.ToString().ToLower()},");
+                sb.AppendLine($"      \"timestamp\": \"{msg.Timestamp}\",");
+                sb.AppendLine($"      \"isError\": {msg.IsError.ToString().ToLower()}");
+                sb.Append(i < _chatHistory.Count - 1 ? "    }," : "    }");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("  ]");
+            sb.AppendLine("}");
+
+            System.IO.File.WriteAllText(path, sb.ToString());
+
+            EditorUtility.DisplayDialog("Export Success", $"Chat history exported to:\n{path}", "OK");
+            Debug.Log($"[KurdostAI] Chat history exported to: {path}");
+        }
+        catch (System.Exception ex)
+        {
+            EditorUtility.DisplayDialog("Export Error", $"Failed to export: {ex.Message}", "OK");
+            Debug.LogError($"[KurdostAI] Export error: {ex}");
+        }
     }
 
     private void DrawToolsTab()
@@ -457,8 +661,103 @@ public class KurdostAIMainWindow : EditorWindow
 
             EditorGUILayout.Space(15);
 
-            EditorGUILayout.TextField("Server:", "https://kurdost-ai-backend.onrender.com");
-            EditorGUILayout.TextField("Status:", "🟢 Connected");
+            // Provider Selection
+            EditorGUILayout.LabelField("Provider", EditorStyles.boldLabel);
+            string[] providers = { "groq", "gemini" };
+            int currentProviderIndex = Array.IndexOf(providers, EditorPrefs.GetString("KurdostAI_Provider", "groq"));
+            int newProviderIndex = EditorGUILayout.Popup(currentProviderIndex, providers);
+            if (newProviderIndex != currentProviderIndex)
+            {
+                EditorPrefs.SetString("KurdostAI_Provider", providers[newProviderIndex]);
+                Repaint();
+            }
+
+            EditorGUILayout.Space(10);
+
+            // Model Selection
+            EditorGUILayout.LabelField("Model", EditorStyles.boldLabel);
+            string[] models = { "llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x7b-32768" };
+            int currentModelIndex = Array.IndexOf(models, EditorPrefs.GetString("KurdostAI_Model", "llama-3.1-8b-instant"));
+            int newModelIndex = EditorGUILayout.Popup(currentModelIndex, models);
+            if (newModelIndex != currentModelIndex)
+            {
+                EditorPrefs.SetString("KurdostAI_Model", models[newModelIndex]);
+                Repaint();
+            }
+
+            EditorGUILayout.Space(10);
+
+            // Temperature Control
+            EditorGUILayout.LabelField("Temperature", EditorStyles.boldLabel);
+            float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
+            float newTemperature = EditorGUILayout.Slider(temperature, 0.0f, 2.0f);
+            if (Mathf.Abs(newTemperature - temperature) > 0.01f)
+            {
+                EditorPrefs.SetFloat("KurdostAI_Temperature", newTemperature);
+            }
+            EditorGUILayout.LabelField($"Value: {newTemperature:F2}", EditorStyles.miniLabel);
+
+            EditorGUILayout.Space(10);
+
+            // Max Tokens Control
+            EditorGUILayout.LabelField("Max Tokens", EditorStyles.boldLabel);
+            int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
+            int newMaxTokens = EditorGUILayout.IntSlider(maxTokens, 100, 4000);
+            if (newMaxTokens != maxTokens)
+            {
+                EditorPrefs.SetInt("KurdostAI_MaxTokens", newMaxTokens);
+            }
+            EditorGUILayout.LabelField($"Value: {newMaxTokens}", EditorStyles.miniLabel);
+
+            EditorGUILayout.Space(15);
+
+            // Custom Server URL
+            EditorGUILayout.LabelField("Server URL", EditorStyles.boldLabel);
+            string serverUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
+            string newServerUrl = EditorGUILayout.TextField(serverUrl);
+            if (newServerUrl != serverUrl)
+            {
+                EditorPrefs.SetString("KurdostAI_ServerUrl", newServerUrl);
+            }
+
+            EditorGUILayout.Space(15);
+
+            // Server Status
+            EditorGUILayout.LabelField("Server Status", EditorStyles.boldLabel);
+            bool isConnected = CheckServerConnection();
+            GUI.backgroundColor = isConnected ? SUCCESS_COLOR : ERROR_COLOR;
+            EditorGUILayout.LabelField(
+                isConnected ? "🟢 Connected" : "🔴 Disconnected",
+                EditorStyles.helpBox
+            );
+            GUI.backgroundColor = Color.white;
+
+            EditorGUILayout.Space(15);
+
+            // Language Preference
+            EditorGUILayout.LabelField("Language", EditorStyles.boldLabel);
+            _selectedLanguage = EditorPrefs.GetInt("KurdostAI_Language", 0);
+            int newLanguage = EditorGUILayout.Popup(_selectedLanguage, _languages);
+            if (newLanguage != _selectedLanguage)
+            {
+                _selectedLanguage = newLanguage;
+                EditorPrefs.SetInt("KurdostAI_Language", _selectedLanguage);
+                Repaint();
+            }
+
+            EditorGUILayout.Space(10);
+
+            // Theme Selection
+            EditorGUILayout.LabelField("Theme", EditorStyles.boldLabel);
+            _selectedTheme = EditorPrefs.GetInt("KurdostAI_Theme", 0);
+            int newTheme = EditorGUILayout.Popup(_selectedTheme, _themes);
+            if (newTheme != _selectedTheme)
+            {
+                _selectedTheme = newTheme;
+                EditorPrefs.SetInt("KurdostAI_Theme", _selectedTheme);
+                ApplyTheme();
+                Repaint();
+            }
 
             EditorGUILayout.Space(15);
 
@@ -509,6 +808,19 @@ public class KurdostAIMainWindow : EditorWindow
         }
     }
 
+    private bool CheckServerConnection()
+    {
+        string serverUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
+        return !string.IsNullOrEmpty(serverUrl) && serverUrl.StartsWith("http");
+    }
+
+    private void ApplyTheme()
+    {
+        // Theme colors would be applied here based on selection
+        // For now, we keep the dark theme as default
+        // Light theme implementation can be added later
+    }
+
     [System.Serializable]
     private class ChatResponse
     {
@@ -524,5 +836,8 @@ public class KurdostAIMainWindow : EditorWindow
     {
         public string Content { get; set; }
         public bool IsUser { get; set; }
+        public string Timestamp { get; set; }
+        public bool IsError { get; set; }
+        public string OriginalMessage { get; set; }
     }
 }
