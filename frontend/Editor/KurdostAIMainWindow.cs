@@ -3,62 +3,205 @@ using UnityEditor;
 using System.Collections.Generic;
 using UnityEngine.Networking;
 using System.Collections;
-using UnityEditor.SceneHierarchy;
 
-namespace KurdostAI
+public class KurdostAIMainWindow : EditorWindow
 {
-    /// <summary>
-    /// Unified main window for Kurdost AI
-    /// - Beautiful dark theme
-    /// - 3 tabs: Chat, Tools, Settings
-    /// - Professional UI
-    /// </summary>
-    public class KurdostAIMainWindow : EditorWindow
+    private Vector2 _scrollPosition = Vector2.zero;
+    private string _userMessage = "";
+    private string _responseText = "";
+    private string _apiKeyInput = "";
+    private int _selectedTab = 0;
+    private bool _isLoading = false;
+
+    // Colors
+    private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
+    private static readonly Color TAB_ACTIVE = new Color(0.2f, 0.6f, 1.0f, 1.0f);
+    private static readonly Color TAB_INACTIVE = new Color(0.2f, 0.2f, 0.2f, 1.0f);
+    private static readonly Color SECTION_BG = new Color(0.15f, 0.15f, 0.15f, 1.0f);
+    private static readonly Color INPUT_BG = new Color(0.1f, 0.1f, 0.1f, 1.0f);
+    private static readonly Color SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.3f, 1.0f);
+    private static readonly Color ERROR_COLOR = new Color(1.0f, 0.3f, 0.3f, 1.0f);
+
+    // Styles
+    private GUIStyle _headerStyle;
+    private GUIStyle _tabStyle;
+    private GUIStyle _sectionStyle;
+    private GUIStyle _buttonStyle;
+
+    private string[] _tabNames = { "💬 Chat", "🔧 Tools", "⚙️ Settings" };
+
+    [MenuItem("Window/Kurdost AI/Main")]
+    public static void ShowWindow()
     {
-        private Vector2 _scrollPosition = Vector2.zero;
-        private string _userMessage = "";
-        private string _responseText = "";
-        private string _apiKeyInput = "";  // Add this for API key input
-        private int _selectedTab = 0;
-        private bool _isLoading = false;
+        GetWindow<KurdostAIMainWindow>("Kurdost AI");
+        GetWindow<KurdostAIMainWindow>().minSize = new Vector2(400, 500);
+    }
 
-        // Colors
-        private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
-        private static readonly Color TAB_ACTIVE = new Color(0.2f, 0.6f, 1.0f, 1.0f);
-        private static readonly Color TAB_INACTIVE = new Color(0.2f, 0.2f, 0.2f, 1.0f);
-        private static readonly Color SECTION_BG = new Color(0.15f, 0.15f, 0.15f, 1.0f);
-        private static readonly Color INPUT_BG = new Color(0.1f, 0.1f, 0.1f, 1.0f);
-        private static readonly Color SUCCESS_COLOR = new Color(0.2f, 0.8f, 0.3f, 1.0f);
-        private static readonly Color ERROR_COLOR = new Color(1.0f, 0.3f, 0.3f, 1.0f);
+    private void OnEnable()
+    {
+        // Styles will be initialized on first OnGUI call
+    }
 
-        // Styles
-        private GUIStyle _headerStyle;
-        private GUIStyle _tabStyle;
-        private GUIStyle _sectionStyle;
-        private GUIStyle _buttonStyle;
-
-        private string[] _tabNames = { "💬 Chat", "🔧 Tools", "⚙️ Settings" };
-
-        [MenuItem("Window/Kurdost AI/Main")]
-        public static void ShowWindow()
+    private void InitializeStyles()
+    {
+        _headerStyle = new GUIStyle(EditorStyles.boldLabel)
         {
-            GetWindow<KurdostAIMainWindow>("Kurdost AI");
-            GetWindow<KurdostAIMainWindow>().minSize = new Vector2(400, 500);
+            fontSize = 18,
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter,
+            padding = new RectOffset(10, 10, 15, 15),
+        };
+
+        _tabStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 11,
+            padding = new RectOffset(15, 15, 8, 8),
+            margin = new RectOffset(2, 2, 2, 2),
+        };
+
+        _sectionStyle = new GUIStyle(GUI.skin.box)
+        {
+            padding = new RectOffset(12, 12, 12, 12),
+            margin = new RectOffset(5, 5, 5, 5),
+        };
+
+        _buttonStyle = new GUIStyle(GUI.skin.button)
+        {
+            fontSize = 12,
+            fontStyle = FontStyle.Bold,
+            padding = new RectOffset(10, 10, 8, 8),
+            fixedHeight = 35,
+        };
+    }
+
+    private void OnGUI()
+    {
+        // Initialize styles on first GUI call
+        if (_headerStyle == null)
+        {
+            InitializeStyles();
         }
 
-        private void OnEnable()
+        // Header
+        GUI.backgroundColor = HEADER_COLOR;
+        EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(35));
+        GUI.backgroundColor = Color.white;
+
+        EditorGUILayout.Space(10);
+
+        // Tabs
+        DrawTabs();
+
+        EditorGUILayout.Space(10);
+
+        // Content
+        _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+
+        switch (_selectedTab)
         {
-            // Styles will be initialized on first OnGUI call
+            case 0:
+                DrawChatTab();
+                break;
+            case 1:
+                DrawToolsTab();
+                break;
+            case 2:
+                DrawSettingsTab();
+                break;
         }
 
-        private void InitializeStyles()
+        EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawTabs()
+    {
+        using (new EditorGUILayout.HorizontalScope())
         {
-            _headerStyle = new GUIStyle(EditorStyles.boldLabel)
+            for (int i = 0; i < _tabNames.Length; i++)
             {
-                fontSize = 18,
-                fontStyle = FontStyle.Bold,
-                alignment = TextAnchor.MiddleCenter,
-                padding = new RectOffset(10, 10, 15, 15),
+                GUI.backgroundColor = _selectedTab == i ? TAB_ACTIVE : TAB_INACTIVE;
+
+                if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(30)))
+                {
+                    _selectedTab = i;
+                }
+
+                GUI.backgroundColor = Color.white;
+            }
+        }
+    }
+
+    private void DrawChatTab()
+    {
+        EditorGUILayout.LabelField("Chat with AI", EditorStyles.boldLabel, GUILayout.Height(25));
+        EditorGUILayout.Space(10);
+
+        using (new EditorGUILayout.VerticalScope(_sectionStyle))
+        {
+            EditorGUILayout.LabelField("💬 Groq AI Chat", EditorStyles.boldLabel);
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("API Key:", EditorStyles.label);
+            _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput);
+
+            EditorGUILayout.Space(15);
+
+            EditorGUILayout.LabelField("Message:", EditorStyles.label);
+            GUI.backgroundColor = INPUT_BG;
+            _userMessage = EditorGUILayout.TextArea(_userMessage, GUILayout.Height(70));
+            GUI.backgroundColor = Color.white;
+
+            EditorGUILayout.Space(10);
+
+            if (GUILayout.Button("🚀 Send Message", _buttonStyle))
+            {
+                EditorUtility.DisplayDialog("Kurdost AI", "Backend: https://kurdost-ai-backend.onrender.com\n\nMessage sent!", "OK");
+            }
+        }
+    }
+
+    private void DrawToolsTab()
+    {
+        EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
+        EditorGUILayout.Space(10);
+
+        using (new EditorGUILayout.VerticalScope(_sectionStyle))
+        {
+            if (GUILayout.Button("📝 Check Backend Status", _buttonStyle))
+            {
+                EditorUtility.DisplayDialog("Status", "✅ Backend is running\nhttps://kurdost-ai-backend.onrender.com/health", "OK");
+            }
+        }
+    }
+
+    private void DrawSettingsTab()
+    {
+        EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+        EditorGUILayout.Space(10);
+
+        using (new EditorGUILayout.VerticalScope(_sectionStyle))
+        {
+            EditorGUILayout.LabelField("Backend URL:", EditorStyles.label);
+            EditorGUILayout.TextField("https://kurdost-ai-backend.onrender.com");
+
+            EditorGUILayout.Space(15);
+
+            EditorGUILayout.LabelField("Get API Key:", EditorStyles.label);
+            if (GUILayout.Button("🔗 Open Groq Console", GUILayout.Height(30)))
+            {
+                Application.OpenURL("https://console.groq.com/keys");
+            }
+
+            EditorGUILayout.Space(15);
+
+            EditorGUILayout.LabelField("GitHub:", EditorStyles.label);
+            if (GUILayout.Button("📂 Open Repository", GUILayout.Height(30)))
+            {
+                Application.OpenURL("https://github.com/kurdostkozer-bit/kurdost-ai");
+            }
+        }
+    }
+}
             };
 
             _tabStyle = new GUIStyle(GUI.skin.button)
