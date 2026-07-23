@@ -768,9 +768,24 @@ public class KurdostAIMainWindow : EditorWindow
             return;
         }
 
-        // Manually construct JSON to avoid JsonUtility limitations
-        string escapedMessage = message.Replace("\"", "\\\"");
-        string jsonBody = $"{{\"provider\":\"{provider}\",\"messages\":[{{\"role\":\"user\",\"content\":\"{escapedMessage}\"}}],\"model\":\"{model}\",\"temperature\":{temperature:F1},\"max_tokens\":{maxTokens}}}";
+        // Use proper JSON serialization to handle Arabic text correctly
+        ChatRequest chatRequest = new ChatRequest
+        {
+            provider = provider,
+            messages = new ChatRequestMessage[] 
+            {
+                new ChatRequestMessage 
+                {
+                    role = "user",
+                    content = message
+                }
+            },
+            model = model,
+            temperature = temperature,
+            max_tokens = maxTokens
+        };
+
+        string jsonBody = JsonUtility.ToJson(chatRequest);
         Debug.Log($"[KurdostAI] Request body: {jsonBody}");
 
         _currentRequest = new UnityWebRequest(apiUrl, "POST");
@@ -1483,6 +1498,23 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         public string model;
         public int tokens_used;
         public string error;
+    }
+
+    [System.Serializable]
+    private class ChatRequest
+    {
+        public string provider;
+        public ChatRequestMessage[] messages;
+        public string model;
+        public float temperature;
+        public int max_tokens;
+    }
+
+    [System.Serializable]
+    private class ChatRequestMessage
+    {
+        public string role;
+        public string content;
     }
 
     private class ChatMessage
