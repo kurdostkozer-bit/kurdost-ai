@@ -489,7 +489,7 @@ public class KurdostAIMainWindow : EditorWindow
         EditorGUILayout.Space(8);
         
         GUI.backgroundColor = INPUT_BG;
-        _userMessage = EditorGUILayout.TextArea(_userMessage, _inputStyle, GUILayout.Height(100));
+        _userMessage = GUILayout.TextArea(_userMessage, GUILayout.Height(100));
         GUI.backgroundColor = Color.white;
 
         EditorGUILayout.Space(15);
