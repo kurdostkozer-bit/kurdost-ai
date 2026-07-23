@@ -7,11 +7,12 @@ using System.Collections;
 public class KurdostAIMainWindow : EditorWindow
 {
     private Vector2 _scrollPosition = Vector2.zero;
+    private Vector2 _chatScrollPosition = Vector2.zero;
     private string _userMessage = "";
-    private string _responseText = "";
     private string _apiKeyInput = "";
     private int _selectedTab = 0;
     private bool _isLoading = false;
+    private List<ChatMessage> _chatHistory = new List<ChatMessage>();
 
     // Colors
     private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
@@ -29,6 +30,9 @@ public class KurdostAIMainWindow : EditorWindow
     private GUIStyle _buttonStyle;
 
     private string[] _tabNames = { "💬 Chat", "🔧 Tools", "⚙️ Settings" };
+    private UnityWebRequest _currentRequest;
+    private System.DateTime _requestStartTime;
+    private const float REQUEST_TIMEOUT = 30f;
 
     [MenuItem("Window/Kurdost AI/Main")]
     public static void ShowWindow()
@@ -76,10 +80,17 @@ public class KurdostAIMainWindow : EditorWindow
 
     private void OnGUI()
     {
-        // Initialize styles on first GUI call
         if (_headerStyle == null)
         {
             InitializeStyles();
+        }
+
+        bool isAuthenticated = EditorPrefs.HasKey("KurdostAI_ApiKey");
+
+        if (!isAuthenticated)
+        {
+            DrawAuthenticationPanel();
+            return;
         }
 
         // Header
@@ -131,607 +142,385 @@ public class KurdostAIMainWindow : EditorWindow
         }
     }
 
+    private void DrawAuthenticationPanel()
+    {
+        EditorGUILayout.Space(50);
+
+        using (new EditorGUILayout.VerticalScope())
+        {
+            GUI.backgroundColor = ERROR_COLOR;
+            EditorGUILayout.LabelField("🔐 Authentication Required", _headerStyle, GUILayout.Height(50));
+            GUI.backgroundColor = Color.white;
+
+            EditorGUILayout.Space(30);
+
+            using (new EditorGUILayout.VerticalScope(_sectionStyle))
+            {
+                EditorGUILayout.LabelField(
+                    "Welcome to Kurdost AI!\n\n" +
+                    "Set up your Groq API key to get started.\n\n" +
+                    "Get a free key from Groq Console.",
+                    EditorStyles.helpBox,
+                    GUILayout.Height(100)
+                );
+
+                EditorGUILayout.Space(20);
+
+                EditorGUILayout.LabelField("API Key:", EditorStyles.label);
+                _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput);
+
+                EditorGUILayout.Space(10);
+
+                if (GUILayout.Button("💾 Save API Key", _buttonStyle))
+                {
+                    if (!string.IsNullOrEmpty(_apiKeyInput))
+                    {
+                        EditorPrefs.SetString("KurdostAI_ApiKey", _apiKeyInput);
+                        EditorUtility.DisplayDialog("✅ Success", "API Key saved! Window will refresh.", "OK");
+                        Repaint();
+                    }
+                    else
+                    {
+                        EditorUtility.DisplayDialog("❌ Error", "Please enter an API key", "OK");
+                    }
+                }
+
+                EditorGUILayout.Space(10);
+
+                if (GUILayout.Button("🔗 Get Free API Key ↗", GUILayout.Height(30)))
+                {
+                    Application.OpenURL("https://console.groq.com/keys");
+                }
+            }
+        }
+    }
+
     private void DrawChatTab()
     {
         EditorGUILayout.LabelField("Chat with AI", EditorStyles.boldLabel, GUILayout.Height(25));
         EditorGUILayout.Space(10);
 
-        using (new EditorGUILayout.VerticalScope(_sectionStyle))
+        using (new EditorGUILayout.VerticalScope(_sectionStyle, GUILayout.ExpandHeight(true)))
         {
-            EditorGUILayout.LabelField("💬 Groq AI Chat", EditorStyles.boldLabel);
-            EditorGUILayout.Space(10);
+            _chatScrollPosition = EditorGUILayout.BeginScrollView(_chatScrollPosition, GUILayout.ExpandHeight(true));
 
-            EditorGUILayout.LabelField("API Key:", EditorStyles.label);
-            _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput);
+            if (_chatHistory.Count == 0)
+            {
+                GUI.backgroundColor = new Color(0.3f, 0.3f, 0.3f);
+                EditorGUILayout.LabelField(
+                    "Start a conversation\n\nType your message below and press Send to chat with Kurdost AI",
+                    EditorStyles.helpBox,
+                    GUILayout.Height(60)
+                );
+                GUI.backgroundColor = Color.white;
+            }
+            else
+            {
+                foreach (var msg in _chatHistory)
+                {
+                    DrawChatMessage(msg);
+                    EditorGUILayout.Space(5);
+                }
+            }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.EndScrollView();
+        }
 
-            EditorGUILayout.LabelField("Message:", EditorStyles.label);
-            GUI.backgroundColor = INPUT_BG;
-            _userMessage = EditorGUILayout.TextArea(_userMessage, GUILayout.Height(70));
-            GUI.backgroundColor = Color.white;
+        EditorGUILayout.Space(10);
 
-            EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Your Message:", EditorStyles.label);
+        GUI.backgroundColor = INPUT_BG;
+        _userMessage = EditorGUILayout.TextArea(_userMessage, GUILayout.Height(70));
+        GUI.backgroundColor = Color.white;
 
+        EditorGUILayout.Space(10);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
             if (GUILayout.Button("🚀 Send Message", _buttonStyle))
             {
-                EditorUtility.DisplayDialog("Kurdost AI", "Backend: https://kurdost-ai-backend.onrender.com\n\nMessage sent!", "OK");
+                if (!string.IsNullOrEmpty(_userMessage))
+                {
+                    SendChatMessage();
+                }
+            }
+
+            if (GUILayout.Button("Clear", GUILayout.Height(35)))
+            {
+                _userMessage = "";
+                _chatHistory.Clear();
             }
         }
     }
 
+    private void DrawChatMessage(ChatMessage msg)
+    {
+        if (msg.IsUser)
+        {
+            using (new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.Space(5);
+                GUI.backgroundColor = new Color(0.2f, 0.5f, 0.8f, 0.3f);
+                EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
+                GUI.backgroundColor = Color.white;
+            }
+        }
+        else
+        {
+            using (new EditorGUILayout.VerticalScope())
+            {
+                EditorGUILayout.Space(5);
+                GUI.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
+                EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
+                GUI.backgroundColor = Color.white;
+            }
+        }
+    }
+
+    private void SendChatMessage()
+    {
+        if (string.IsNullOrEmpty(_userMessage))
+            return;
+
+        _chatHistory.Add(new ChatMessage { Content = _userMessage, IsUser = true });
+
+        string userMsg = _userMessage;
+        _userMessage = "";
+
+        _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false });
+
+        _isLoading = true;
+        Repaint();
+
+        SendToBackendCoroutine(userMsg);
+    }
+
+    private void SendToBackendCoroutine(string message)
+    {
+        SendToBackend(message);
+        EditorApplication.update += UpdateBackendRequest;
+    }
+
+    private void SendToBackend(string message)
+    {
+        string apiUrl = "https://kurdost-ai-backend.onrender.com/api/v1/chat";
+        string apiKey = EditorPrefs.GetString("KurdostAI_ApiKey", "");
+        string provider = EditorPrefs.GetString("KurdostAI_Provider", "groq");
+
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            UpdateAIResponse("Error: No API Key provided", isError: true);
+            return;
+        }
+
+        var requestData = new
+        {
+            provider = provider,
+            messages = new object[]
+            {
+                new { role = "user", content = message }
+            },
+            model = "llama-3.1-8b-instant",
+            temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f),
+            max_tokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000)
+        };
+
+        string jsonBody = JsonUtility.ToJson(requestData);
+
+        _currentRequest = new UnityWebRequest(apiUrl, "POST");
+        _currentRequest.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonBody));
+        _currentRequest.downloadHandler = new DownloadHandlerBuffer();
+        _currentRequest.SetRequestHeader("Content-Type", "application/json");
+        if (!string.IsNullOrEmpty(apiKey))
+        {
+            _currentRequest.SetRequestHeader("X-API-Key", apiKey);
+        }
+
+        _currentRequest.SendWebRequest();
+        _requestStartTime = System.DateTime.Now;
+
+        Debug.Log($"[KurdostAI] Request sent to {apiUrl}");
+    }
+
+    private void UpdateBackendRequest()
+    {
+        if (_currentRequest == null)
+        {
+            EditorApplication.update -= UpdateBackendRequest;
+            return;
+        }
+
+        float elapsed = (float)(System.DateTime.Now - _requestStartTime).TotalSeconds;
+        if (elapsed > REQUEST_TIMEOUT)
+        {
+            _currentRequest.Abort();
+            UpdateAIResponse("Error: Backend timeout", isError: true);
+            EditorApplication.update -= UpdateBackendRequest;
+            _currentRequest = null;
+            return;
+        }
+
+        if (_currentRequest.isDone)
+        {
+            if (_currentRequest.result == UnityWebRequest.Result.Success)
+            {
+                string responseText = _currentRequest.downloadHandler.text;
+                Debug.Log($"[KurdostAI] Response: {responseText}");
+
+                try
+                {
+                    var response = JsonUtility.FromJson<ChatResponse>(responseText);
+                    if (response.success && !string.IsNullOrEmpty(response.message))
+                    {
+                        UpdateAIResponse(response.message, isError: false);
+                    }
+                    else if (!string.IsNullOrEmpty(response.response))
+                    {
+                        UpdateAIResponse(response.response, isError: false);
+                    }
+                    else
+                    {
+                        UpdateAIResponse(response.error ?? "Error: No response from backend", isError: true);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[KurdostAI] Parse error: {ex}");
+                    UpdateAIResponse(responseText, isError: false);
+                }
+            }
+            else
+            {
+                string errorMsg = $"Backend Error: {_currentRequest.error} (Status: {_currentRequest.responseCode})";
+                Debug.LogError($"[KurdostAI] {errorMsg}");
+                UpdateAIResponse(errorMsg, isError: true);
+            }
+
+            _currentRequest.Dispose();
+            _currentRequest = null;
+            EditorApplication.update -= UpdateBackendRequest;
+        }
+
+        Repaint();
+    }
+
+    private void UpdateAIResponse(string response, bool isError)
+    {
+        if (_chatHistory.Count > 0 && _chatHistory[_chatHistory.Count - 1].Content.Contains("Loading"))
+        {
+            _chatHistory.RemoveAt(_chatHistory.Count - 1);
+        }
+
+        _chatHistory.Add(new ChatMessage { Content = response, IsUser = false });
+
+        _isLoading = false;
+        Repaint();
+    }
+
     private void DrawToolsTab()
     {
-        EditorGUILayout.LabelField("Tools", EditorStyles.boldLabel);
-        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Analysis Tools", EditorStyles.boldLabel, GUILayout.Height(20));
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle))
         {
-            if (GUILayout.Button("📝 Check Backend Status", _buttonStyle))
+            EditorGUILayout.LabelField("Quick Actions:", EditorStyles.boldLabel);
+            EditorGUILayout.Space(10);
+
+            if (GUILayout.Button("📝 Analyze Selected Script", _buttonStyle))
             {
-                EditorUtility.DisplayDialog("Status", "✅ Backend is running\nhttps://kurdost-ai-backend.onrender.com/health", "OK");
+                EditorUtility.DisplayDialog("Coming Soon", "Script analysis coming in v0.4", "OK");
             }
+
+            EditorGUILayout.Space(5);
+
+            if (GUILayout.Button("🐛 Fix Console Errors", _buttonStyle))
+            {
+                EditorUtility.DisplayDialog("Coming Soon", "Error analysis coming in v0.4", "OK");
+            }
+
+            EditorGUILayout.Space(5);
+
+            if (GUILayout.Button("✨ Generate Script", _buttonStyle))
+            {
+                EditorUtility.DisplayDialog("Coming Soon", "Code generation coming in v0.4", "OK");
+            }
+
+            EditorGUILayout.Space(15);
+            EditorGUILayout.HelpBox("Advanced tools coming in v0.4", MessageType.Info);
         }
     }
 
     private void DrawSettingsTab()
     {
-        EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
-        EditorGUILayout.Space(10);
+        EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel, GUILayout.Height(20));
 
         using (new EditorGUILayout.VerticalScope(_sectionStyle))
         {
-            EditorGUILayout.LabelField("Backend URL:", EditorStyles.label);
-            EditorGUILayout.TextField("https://kurdost-ai-backend.onrender.com");
+            EditorGUILayout.LabelField("API Configuration", EditorStyles.boldLabel);
+
+            bool hasKey = EditorPrefs.HasKey("KurdostAI_ApiKey");
+            GUI.backgroundColor = hasKey ? SUCCESS_COLOR : ERROR_COLOR;
+            EditorGUILayout.LabelField(
+                hasKey ? "✓ API Key Configured" : "✗ No API Key",
+                EditorStyles.helpBox
+            );
+            GUI.backgroundColor = Color.white;
 
             EditorGUILayout.Space(15);
 
-            EditorGUILayout.LabelField("Get API Key:", EditorStyles.label);
+            EditorGUILayout.TextField("Server:", "https://kurdost-ai-backend.onrender.com");
+            EditorGUILayout.TextField("Status:", "🟢 Connected");
+
+            EditorGUILayout.Space(15);
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Change API Key", GUILayout.Height(30)))
+                {
+                    EditorUtility.DisplayDialog("Info", "API Key can be changed by logging out and logging back in.", "OK");
+                }
+
+                if (GUILayout.Button("Logout", GUILayout.Height(30)))
+                {
+                    if (EditorUtility.DisplayDialog("Logout", "Remove API key?", "Yes", "No"))
+                    {
+                        EditorPrefs.DeleteKey("KurdostAI_ApiKey");
+                        _chatHistory.Clear();
+                        Repaint();
+                    }
+                }
+            }
+
+            EditorGUILayout.Space(15);
+
             if (GUILayout.Button("🔗 Open Groq Console", GUILayout.Height(30)))
             {
                 Application.OpenURL("https://console.groq.com/keys");
             }
 
-            EditorGUILayout.Space(15);
+            EditorGUILayout.Space(5);
 
-            EditorGUILayout.LabelField("GitHub:", EditorStyles.label);
             if (GUILayout.Button("📂 Open Repository", GUILayout.Height(30)))
             {
                 Application.OpenURL("https://github.com/kurdostkozer-bit/kurdost-ai");
             }
         }
     }
-}
-            };
 
-            _tabStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 11,
-                padding = new RectOffset(15, 15, 8, 8),
-                margin = new RectOffset(2, 2, 2, 2),
-            };
-
-            _sectionStyle = new GUIStyle(GUI.skin.box)
-            {
-                padding = new RectOffset(12, 12, 12, 12),
-                margin = new RectOffset(5, 5, 5, 5),
-            };
-
-            _buttonStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12,
-                fontStyle = FontStyle.Bold,
-                padding = new RectOffset(10, 10, 8, 8),
-                fixedHeight = 35,
-            };
-        }
-
-        private void OnGUI()
-        {
-            // Initialize styles on first GUI call
-            if (_headerStyle == null)
-            {
-                InitializeStyles();
-            }
-
-            // Check authentication
-            bool isAuthenticated = EditorPrefs.HasKey("KurdostAI_ApiKey");
-            
-            if (!isAuthenticated)
-            {
-                DrawAuthenticationPanel();
-                return;
-            }
-
-            // Header
-            DrawHeader();
-
-            EditorGUILayout.Space(10);
-
-            // Tabs
-            DrawTabs();
-
-            EditorGUILayout.Space(10);
-
-            // Content
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
-
-            switch (_selectedTab)
-            {
-                case 0:
-                    DrawChatTab();
-                    break;
-                case 1:
-                    DrawToolsTab();
-                    break;
-                case 2:
-                    DrawSettingsTab();
-                    break;
-            }
-
-            EditorGUILayout.EndScrollView();
-        }
-
-        private void DrawHeader()
-        {
-            GUI.backgroundColor = HEADER_COLOR;
-            EditorGUILayout.LabelField("🤖 Kurdost AI Assistant", _headerStyle, GUILayout.Height(35));
-            GUI.backgroundColor = Color.white;
-        }
-
-        private void DrawTabs()
-        {
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                for (int i = 0; i < _tabNames.Length; i++)
-                {
-                    GUI.backgroundColor = _selectedTab == i ? TAB_ACTIVE : TAB_INACTIVE;
-
-                    if (GUILayout.Button(_tabNames[i], _tabStyle, GUILayout.Height(30)))
-                    {
-                        _selectedTab = i;
-                    }
-
-                    GUI.backgroundColor = Color.white;
-                }
-            }
-        }
-
-        private void DrawAuthenticationPanel()
-        {
-            EditorGUILayout.Space(50);
-
-            using (new EditorGUILayout.VerticalScope())
-            {
-                GUI.backgroundColor = ERROR_COLOR;
-                EditorGUILayout.LabelField("🔐 Authentication Required", _headerStyle, GUILayout.Height(50));
-                GUI.backgroundColor = Color.white;
-
-                EditorGUILayout.Space(30);
-
-                using (new EditorGUILayout.VerticalScope(_sectionStyle))
-                {
-                    EditorGUILayout.LabelField(
-                        "Welcome to Kurdost AI!\n\n" +
-                        "Set up your Groq API key to get started.\n\n" +
-                        "Get a free key from Groq Console.",
-                        EditorStyles.helpBox,
-                        GUILayout.Height(100)
-                    );
-
-                    EditorGUILayout.Space(20);
-
-                    // Input field for API Key
-                    EditorGUILayout.LabelField("API Key:", EditorStyles.label);
-                    _apiKeyInput = EditorGUILayout.PasswordField(_apiKeyInput);
-                    
-                    EditorGUILayout.Space(10);
-
-                    // Save button
-                    if (GUILayout.Button("💾 Save API Key", _buttonStyle))
-                    {
-                        if (!string.IsNullOrEmpty(_apiKeyInput))
-                        {
-                            EditorPrefs.SetString("KurdostAI_ApiKey", _apiKeyInput);
-                            EditorUtility.DisplayDialog("✅ Success", "API Key saved! Window will refresh.", "OK");
-                            Repaint();
-                        }
-                        else
-                        {
-                            EditorUtility.DisplayDialog("❌ Error", "Please enter an API key", "OK");
-                        }
-                    }
-
-                    EditorGUILayout.Space(10);
-
-                    // Get free API key button
-                    if (GUILayout.Button("🔗 Get Free API Key ↗", GUILayout.Height(30)))
-                    {
-                        Application.OpenURL("https://console.groq.com/keys");
-                    }
-                }
-            }
-        }
-
-        private Vector2 _chatScrollPosition = Vector2.zero;
-
-        private void DrawChatTab()
-        {
-            EditorGUILayout.LabelField("Chat with AI", EditorStyles.boldLabel, GUILayout.Height(25));
-            EditorGUILayout.Space(10);
-
-            using (new EditorGUILayout.VerticalScope(_sectionStyle, GUILayout.ExpandHeight(true)))
-            {
-                // Chat history area
-                _chatScrollPosition = EditorGUILayout.BeginScrollView(_chatScrollPosition, GUILayout.ExpandHeight(true));
-                
-                if (_chatHistory.Count == 0)
-                {
-                    GUI.backgroundColor = new Color(0.3f, 0.3f, 0.3f);
-                    EditorGUILayout.LabelField(
-                        "Start a conversation\n\nType your message below and press Send to chat with Kurdost AI",
-                        EditorStyles.helpBox,
-                        GUILayout.Height(60)
-                    );
-                    GUI.backgroundColor = Color.white;
-                }
-                else
-                {
-                    foreach (var msg in _chatHistory)
-                    {
-                        DrawChatMessage(msg);
-                        EditorGUILayout.Space(5);
-                    }
-                }
-
-                EditorGUILayout.EndScrollView();
-            }
-
-            EditorGUILayout.Space(10);
-
-            // Input area
-            EditorGUILayout.LabelField("Your Message:", EditorStyles.label);
-            GUI.backgroundColor = INPUT_BG;
-            _userMessage = EditorGUILayout.TextArea(_userMessage, GUILayout.Height(70));
-            GUI.backgroundColor = Color.white;
-
-            EditorGUILayout.Space(10);
-
-            // Buttons
-            using (new EditorGUILayout.HorizontalScope())
-            {
-                if (GUILayout.Button("Send Message", _buttonStyle))
-                {
-                    if (!string.IsNullOrEmpty(_userMessage))
-                    {
-                        SendChatMessage();
-                    }
-                }
-
-                if (GUILayout.Button("Clear", GUILayout.Height(35)))
-                {
-                    _userMessage = "";
-                    _chatHistory.Clear();
-                }
-            }
-        }
-
-        private void DrawChatMessage(ChatMessage msg)
-        {
-            if (msg.IsUser)
-            {
-                // User message - right aligned, blue background
-                using (new EditorGUILayout.VerticalScope())
-                {
-                    EditorGUILayout.Space(5);
-                    GUI.backgroundColor = new Color(0.2f, 0.5f, 0.8f, 0.3f);
-                    EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
-                    GUI.backgroundColor = Color.white;
-                }
-            }
-            else
-            {
-                // AI message - left aligned, gray background
-                using (new EditorGUILayout.VerticalScope())
-                {
-                    EditorGUILayout.Space(5);
-                    GUI.backgroundColor = new Color(0.4f, 0.4f, 0.4f, 0.3f);
-                    EditorGUILayout.TextArea(msg.Content, EditorStyles.helpBox, GUILayout.MinHeight(40));
-                    GUI.backgroundColor = Color.white;
-                }
-            }
-        }
-
-        private void SendChatMessage()
-        {
-            if (string.IsNullOrEmpty(_userMessage))
-                return;
-
-            // Add user message to history
-            _chatHistory.Add(new ChatMessage { Content = _userMessage, IsUser = true });
-            
-            string userMsg = _userMessage;
-            _userMessage = "";
-
-            // Add loading indicator
-            _chatHistory.Add(new ChatMessage { 
-                Content = "Loading...",
-                IsUser = false 
-            });
-
-            _isLoading = true;
-            Repaint();
-
-            // Send to backend
-            EditorApplication.update += () => SendToBackendCoroutine(userMsg);
-        }
-
-        private UnityWebRequest _currentRequest;
-        private System.DateTime _requestStartTime;
-        private const float REQUEST_TIMEOUT = 30f;
-
-        private void SendToBackendCoroutine(string message)
-        {
-            SendToBackend(message);
-            EditorApplication.update += UpdateBackendRequest;
-        }
-
-        private void SendToBackend(string message)
-        {
-            // ✅ Using Render production URL
-            string apiUrl = "https://kurdost-ai-backend.onrender.com/api/v1/chat";
-            string apiKey = EditorPrefs.GetString("KurdostAI_ApiKey", "");
-            string provider = EditorPrefs.GetString("KurdostAI_Provider", "groq");
-
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                UpdateAIResponse("Error: No API Key provided", isError: true);
-                return;
-            }
-
-            // Create request with new format
-            var requestData = new
-            {
-                provider = provider,
-                messages = new object[]
-                {
-                    new { role = "user", content = message }
-                },
-                model = "llama-3.1-8b-instant",
-                temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f),
-                max_tokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000)
-            };
-
-            string jsonBody = JsonUtility.ToJson(requestData);
-
-            _currentRequest = new UnityWebRequest(apiUrl, "POST");
-            _currentRequest.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonBody));
-            _currentRequest.downloadHandler = new DownloadHandlerBuffer();
-            _currentRequest.SetRequestHeader("Content-Type", "application/json");
-            if (!string.IsNullOrEmpty(apiKey))
-            {
-                _currentRequest.SetRequestHeader("X-API-Key", apiKey);
-            }
-
-            _currentRequest.SendWebRequest();
-            _requestStartTime = System.DateTime.Now;
-
-            Debug.Log($"[KurdostAI] Request sent to {apiUrl}");
-        }
-
-        private void UpdateBackendRequest()
-        {
-            if (_currentRequest == null)
-            {
-                EditorApplication.update -= UpdateBackendRequest;
-                return;
-            }
-
-            // Check timeout
-            float elapsed = (float)(System.DateTime.Now - _requestStartTime).TotalSeconds;
-            if (elapsed > REQUEST_TIMEOUT)
-            {
-                _currentRequest.Abort();
-                UpdateAIResponse("Error: Backend timeout", isError: true);
-                EditorApplication.update -= UpdateBackendRequest;
-                _currentRequest = null;
-                return;
-            }
-
-            // Check if request is done
-            if (_currentRequest.isDone)
-            {
-                if (_currentRequest.result == UnityWebRequest.Result.Success)
-                {
-                    string responseText = _currentRequest.downloadHandler.text;
-                    Debug.Log($"[KurdostAI] Response: {responseText}");
-                    
-                    try
-                    {
-                        var response = JsonUtility.FromJson<ChatResponse>(responseText);
-                        if (response.success && !string.IsNullOrEmpty(response.message))
-                        {
-                            UpdateAIResponse(response.message, isError: false);
-                        }
-                        else if (!string.IsNullOrEmpty(response.response))
-                        {
-                            UpdateAIResponse(response.response, isError: false);
-                        }
-                        else
-                        {
-                            UpdateAIResponse(response.error ?? "Error: No response from backend", isError: true);
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        Debug.LogError($"[KurdostAI] Parse error: {ex}");
-                        UpdateAIResponse(responseText, isError: false);
-                    }
-                }
-                else
-                {
-                    string errorMsg = $"Backend Error: {_currentRequest.error} (Status: {_currentRequest.responseCode})";
-                    Debug.LogError($"[KurdostAI] {errorMsg}");
-                    UpdateAIResponse(errorMsg, isError: true);
-                }
-
-                _currentRequest.Dispose();
-                _currentRequest = null;
-                EditorApplication.update -= UpdateBackendRequest;
-            }
-
-            Repaint();
-        }
-
-        private void UpdateAIResponse(string response, bool isError)
-        {
-            // Remove loading indicator
-            if (_chatHistory.Count > 0 && _chatHistory[_chatHistory.Count - 1].Content.Contains("Loading"))
-            {
-                _chatHistory.RemoveAt(_chatHistory.Count - 1);
-            }
-
-            // Add AI response
-            _chatHistory.Add(new ChatMessage { 
-                Content = response,
-                IsUser = false 
-            });
-
-            _isLoading = false;
-            Repaint();
-        }
-
-        // Response structure - Updated for new Backend API
-        [System.Serializable]
-        private class ChatResponse
-        {
-            public bool success;
-            public string message;
-            public string response;  // Fallback for compatibility
-            public string model;
-            public int tokens_used;
-            public string error;
-        }
-
-        // Chat message structure
-        private class ChatMessage
-        {
-            public string Content { get; set; }
-            public bool IsUser { get; set; }
-        }
-
-        // Add this to the class variables
-        private List<ChatMessage> _chatHistory = new List<ChatMessage>();
-
-        private void DrawToolsTab()
-        {
-            EditorGUILayout.LabelField("Analysis Tools", EditorStyles.boldLabel, GUILayout.Height(20));
-
-            using (new EditorGUILayout.VerticalScope(_sectionStyle))
-            {
-                EditorGUILayout.LabelField("Quick Actions:", EditorStyles.boldLabel);
-                EditorGUILayout.Space(10);
-
-                if (GUILayout.Button("📝 Analyze Selected Script", _buttonStyle))
-                {
-                    EditorUtility.DisplayDialog("Coming Soon", "Script analysis coming in v0.4", "OK");
-                }
-
-                EditorGUILayout.Space(5);
-
-                if (GUILayout.Button("🐛 Fix Console Errors", _buttonStyle))
-                {
-                    EditorUtility.DisplayDialog("Coming Soon", "Error analysis coming in v0.4", "OK");
-                }
-
-                EditorGUILayout.Space(5);
-
-                if (GUILayout.Button("✨ Generate Script", _buttonStyle))
-                {
-                    EditorUtility.DisplayDialog("Coming Soon", "Code generation coming in v0.4", "OK");
-                }
-
-                EditorGUILayout.Space(5);
-
-                if (GUILayout.Button("🎮 Analyze Scene", _buttonStyle))
-                {
-                    EditorUtility.DisplayDialog("Coming Soon", "Scene analysis coming in v0.4", "OK");
-                }
-
-                EditorGUILayout.Space(15);
-                EditorGUILayout.HelpBox("Advanced tools coming in v0.4", MessageType.Info);
-            }
-        }
-
-        private void DrawSettingsTab()
-        {
-            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel, GUILayout.Height(20));
-
-            using (new EditorGUILayout.VerticalScope(_sectionStyle))
-            {
-                EditorGUILayout.LabelField("API Configuration", EditorStyles.boldLabel);
-
-                bool hasKey = EditorPrefs.HasKey("KurdostAI_ApiKey");
-                GUI.backgroundColor = hasKey ? SUCCESS_COLOR : ERROR_COLOR;
-                EditorGUILayout.LabelField(
-                    hasKey ? "✓ API Key Configured" : "✗ No API Key",
-                    EditorStyles.helpBox
-                );
-                GUI.backgroundColor = Color.white;
-
-                EditorGUILayout.Space(15);
-
-                EditorGUILayout.LabelField("Model Settings", EditorStyles.boldLabel);
-
-                float temperature = EditorPrefs.GetFloat("KurdostAI_Temperature", 0.7f);
-                temperature = EditorGUILayout.Slider("Temperature:", temperature, 0f, 2f);
-                EditorPrefs.SetFloat("KurdostAI_Temperature", temperature);
-
-                int maxTokens = EditorPrefs.GetInt("KurdostAI_MaxTokens", 1000);
-                maxTokens = EditorGUILayout.IntSlider("Max Tokens:", maxTokens, 100, 4000);
-                EditorPrefs.SetInt("KurdostAI_MaxTokens", maxTokens);
-
-                EditorGUILayout.Space(15);
-
-                EditorGUILayout.TextField("Server:", "https://kurdost-ai-backend.onrender.com");
-                EditorGUILayout.TextField("Status:", "🟢 Connected");
-
-                EditorGUILayout.Space(15);
-
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("Change API Key", GUILayout.Height(30)))
-                    {
-                        string newKey = EditorInputDialog.Show("Change API Key", "Enter new API Key:", EditorPrefs.GetString("KurdostAI_ApiKey", ""));
-                        if (!string.IsNullOrEmpty(newKey))
-                        {
-                            EditorPrefs.SetString("KurdostAI_ApiKey", newKey);
-                        }
-                    }
-
-                    if (GUILayout.Button("Logout", GUILayout.Height(30)))
-                    {
-                        if (EditorUtility.DisplayDialog("Logout", "Remove API key?", "Yes", "No"))
-                        {
-                            EditorPrefs.DeleteKey("KurdostAI_ApiKey");
-                            Repaint();
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Simple input dialog helper
-    /// </summary>
-    public class EditorInputDialog
+    [System.Serializable]
+    private class ChatResponse
     {
-        public static string Show(string title, string prompt, string defaultValue = "")
-        {
-            // Placeholder - in real implementation would show a dialog
-            return EditorUtility.SaveFilePanel(title, "", prompt, "");
-        }
+        public bool success;
+        public string message;
+        public string response;
+        public string model;
+        public int tokens_used;
+        public string error;
+    }
+
+    private class ChatMessage
+    {
+        public string Content { get; set; }
+        public bool IsUser { get; set; }
     }
 }
-
