@@ -20,6 +20,9 @@ public class KurdostAIMainWindow : EditorWindow
     private int _selectedLanguage = 0;
     private string[] _themes = { "Dark", "Light" };
     private int _selectedTheme = 0;
+    private List<Notification> _notifications = new List<Notification>();
+    private float _notificationDisplayTime = 3f;
+    private float _notificationTimer = 0f;
 
     // Colors
     private static readonly Color HEADER_COLOR = new Color(0.2f, 0.6f, 1.0f, 1.0f);
@@ -92,12 +95,18 @@ public class KurdostAIMainWindow : EditorWindow
             InitializeStyles();
         }
 
+        // Handle keyboard shortcuts
+        HandleKeyboardShortcuts();
+
         // Update loading animation
         if (_isLoading)
         {
             _loadingFrame++;
             Repaint();
         }
+
+        // Update notifications
+        UpdateNotifications();
 
         bool isAuthenticated = EditorPrefs.HasKey("KurdostAI_ApiKey");
 
@@ -136,6 +145,75 @@ public class KurdostAIMainWindow : EditorWindow
         }
 
         EditorGUILayout.EndScrollView();
+
+        // Draw notifications
+        DrawNotifications();
+    }
+
+    private void HandleKeyboardShortcuts()
+    {
+        Event e = Event.current;
+
+        if (e.type == EventType.KeyDown)
+        {
+            // Ctrl+Enter to send message
+            if (e.control && e.keyCode == KeyCode.Return)
+            {
+                if (_selectedTab == 0 && !string.IsNullOrEmpty(_userMessage))
+                {
+                    SendChatMessage();
+                    e.Use();
+                }
+            }
+
+            // Ctrl+E to export chat
+            if (e.control && e.keyCode == KeyCode.E)
+            {
+                if (_selectedTab == 0)
+                {
+                    ExportChatHistory();
+                    e.Use();
+                }
+            }
+
+            // Ctrl+N to clear chat
+            if (e.control && e.keyCode == KeyCode.N)
+            {
+                if (_selectedTab == 0)
+                {
+                    if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
+                    {
+                        _userMessage = "";
+                        _chatHistory.Clear();
+                    }
+                    e.Use();
+                }
+            }
+
+            // Ctrl+1 to switch to Chat tab
+            if (e.control && e.keyCode == KeyCode.Alpha1)
+            {
+                _selectedTab = 0;
+                Repaint();
+                e.Use();
+            }
+
+            // Ctrl+2 to switch to Tools tab
+            if (e.control && e.keyCode == KeyCode.Alpha2)
+            {
+                _selectedTab = 1;
+                Repaint();
+                e.Use();
+            }
+
+            // Ctrl+3 to switch to Settings tab
+            if (e.control && e.keyCode == KeyCode.Alpha3)
+            {
+                _selectedTab = 2;
+                Repaint();
+                e.Use();
+            }
+        }
     }
 
     private void DrawTabs()
@@ -185,7 +263,7 @@ public class KurdostAIMainWindow : EditorWindow
 
                 EditorGUILayout.Space(10);
 
-                if (GUILayout.Button("💾 Save API Key", _buttonStyle))
+                if (GUILayout.Button(new GUIContent("💾 Save API Key", "Save your Groq API key"), _buttonStyle))
                 {
                     if (!string.IsNullOrEmpty(_apiKeyInput))
                     {
@@ -201,7 +279,7 @@ public class KurdostAIMainWindow : EditorWindow
 
                 EditorGUILayout.Space(10);
 
-                if (GUILayout.Button("🔗 Get Free API Key ↗", GUILayout.Height(30)))
+                if (GUILayout.Button(new GUIContent("🔗 Get Free API Key ↗", "Open Groq Console to get a free API key"), GUILayout.Height(30)))
                 {
                     Application.OpenURL("https://console.groq.com/keys");
                 }
@@ -257,7 +335,7 @@ public class KurdostAIMainWindow : EditorWindow
 
         using (new EditorGUILayout.HorizontalScope())
         {
-            if (GUILayout.Button("🚀 Send Message", _buttonStyle))
+            if (GUILayout.Button(new GUIContent("🚀 Send Message", "Send message (Ctrl+Enter)"), _buttonStyle))
             {
                 if (!string.IsNullOrEmpty(_userMessage))
                 {
@@ -265,12 +343,12 @@ public class KurdostAIMainWindow : EditorWindow
                 }
             }
 
-            if (GUILayout.Button("📤 Export", GUILayout.Height(35)))
+            if (GUILayout.Button(new GUIContent("📤 Export", "Export chat history (Ctrl+E)"), GUILayout.Height(35)))
             {
                 ExportChatHistory();
             }
 
-            if (GUILayout.Button("Clear", GUILayout.Height(35)))
+            if (GUILayout.Button(new GUIContent("Clear", "Clear chat (Ctrl+N)"), GUILayout.Height(35)))
             {
                 if (EditorUtility.DisplayDialog("Clear Chat", "Are you sure you want to clear all messages?", "Yes", "No"))
                 {
@@ -340,13 +418,14 @@ public class KurdostAIMainWindow : EditorWindow
                 if (GUILayout.Button("📋", GUILayout.Width(25), GUILayout.Height(20)))
                 {
                     GUIUtility.systemCopyBuffer = msg.Content;
-                    Debug.Log("[KurdostAI] Message copied to clipboard");
+                    ShowNotification("Message copied to clipboard", NotificationType.Success);
                 }
 
                 // Delete button
                 if (GUILayout.Button("🗑️", GUILayout.Width(25), GUILayout.Height(20)))
                 {
                     _chatHistory.Remove(msg);
+                    ShowNotification("Message deleted", NotificationType.Info);
                     Repaint();
                     return;
                 }
@@ -601,11 +680,13 @@ public class KurdostAIMainWindow : EditorWindow
             System.IO.File.WriteAllText(path, sb.ToString());
 
             EditorUtility.DisplayDialog("Export Success", $"Chat history exported to:\n{path}", "OK");
+            ShowNotification("Chat history exported successfully", NotificationType.Success);
             Debug.Log($"[KurdostAI] Chat history exported to: {path}");
         }
         catch (System.Exception ex)
         {
             EditorUtility.DisplayDialog("Export Error", $"Failed to export: {ex.Message}", "OK");
+            ShowNotification("Export failed", NotificationType.Error);
             Debug.LogError($"[KurdostAI] Export error: {ex}");
         }
     }
@@ -619,21 +700,21 @@ public class KurdostAIMainWindow : EditorWindow
             EditorGUILayout.LabelField("Quick Actions:", EditorStyles.boldLabel);
             EditorGUILayout.Space(10);
 
-            if (GUILayout.Button("📝 Analyze Selected Script", _buttonStyle))
+            if (GUILayout.Button(new GUIContent("📝 Analyze Selected Script", "Analyze the selected C# script for code quality and improvements"), _buttonStyle))
             {
                 AnalyzeSelectedScript();
             }
 
             EditorGUILayout.Space(5);
 
-            if (GUILayout.Button("🐛 Fix Console Errors", _buttonStyle))
+            if (GUILayout.Button(new GUIContent("🐛 Fix Console Errors", "Analyze and provide fixes for console errors"), _buttonStyle))
             {
                 FixConsoleErrors();
             }
 
             EditorGUILayout.Space(5);
 
-            if (GUILayout.Button("✨ Generate Script", _buttonStyle))
+            if (GUILayout.Button(new GUIContent("✨ Generate Script", "Generate a new Unity script with AI assistance"), _buttonStyle))
             {
                 GenerateScript();
             }
@@ -797,8 +878,12 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             int newProviderIndex = EditorGUILayout.Popup(currentProviderIndex, providers);
             if (newProviderIndex != currentProviderIndex)
             {
-                EditorPrefs.SetString("KurdostAI_Provider", providers[newProviderIndex]);
-                Repaint();
+                if (EditorUtility.DisplayDialog("Change Provider", $"Change provider from {providers[currentProviderIndex]} to {providers[newProviderIndex]}?", "Yes", "No"))
+                {
+                    EditorPrefs.SetString("KurdostAI_Provider", providers[newProviderIndex]);
+                    ShowNotification($"Provider changed to {providers[newProviderIndex]}", NotificationType.Success);
+                    Repaint();
+                }
             }
 
             EditorGUILayout.Space(10);
@@ -810,8 +895,12 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
             int newModelIndex = EditorGUILayout.Popup(currentModelIndex, models);
             if (newModelIndex != currentModelIndex)
             {
-                EditorPrefs.SetString("KurdostAI_Model", models[newModelIndex]);
-                Repaint();
+                if (EditorUtility.DisplayDialog("Change Model", $"Change model from {models[currentModelIndex]} to {models[newModelIndex]}?", "Yes", "No"))
+                {
+                    EditorPrefs.SetString("KurdostAI_Model", models[newModelIndex]);
+                    ShowNotification($"Model changed to {models[newModelIndex]}", NotificationType.Success);
+                    Repaint();
+                }
             }
 
             EditorGUILayout.Space(10);
@@ -902,6 +991,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
                         EditorPrefs.SetString("KurdostAI_ApiKey", _settingsApiKeyInput);
                         _settingsApiKeyInput = "";
                         EditorUtility.DisplayDialog("Success", "API Key updated successfully!", "OK");
+                        ShowNotification("API Key updated successfully", NotificationType.Success);
                         Repaint();
                     }
                     else
@@ -950,6 +1040,98 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         // Light theme implementation can be added later
     }
 
+    private void UpdateNotifications()
+    {
+        if (_notifications.Count > 0)
+        {
+            _notificationTimer += Time.deltaTime;
+
+            if (_notificationTimer >= 0.1f)
+            {
+                _notificationTimer = 0f;
+
+                for (int i = _notifications.Count - 1; i >= 0; i--)
+                {
+                    _notifications[i].TimeLeft -= 0.1f;
+
+                    if (_notifications[i].TimeLeft <= 0)
+                    {
+                        _notifications.RemoveAt(i);
+                    }
+                }
+
+                if (_notifications.Count > 0)
+                {
+                    Repaint();
+                }
+            }
+        }
+    }
+
+    private void DrawNotifications()
+    {
+        if (_notifications.Count == 0)
+            return;
+
+        float notificationWidth = 300f;
+        float notificationHeight = 60f;
+        float spacing = 10f;
+        float startY = 10f;
+
+        for (int i = 0; i < _notifications.Count; i++)
+        {
+            var notification = _notifications[i];
+            Rect notificationRect = new Rect(
+                position.width - notificationWidth - 10f,
+                startY + (i * (notificationHeight + spacing)),
+                notificationWidth,
+                notificationHeight
+            );
+
+            Color bgColor;
+            switch (notification.Type)
+            {
+                case NotificationType.Success:
+                    bgColor = SUCCESS_COLOR;
+                    break;
+                case NotificationType.Error:
+                    bgColor = ERROR_COLOR;
+                    break;
+                case NotificationType.Warning:
+                    bgColor = new Color(1.0f, 0.8f, 0.2f, 1.0f);
+                    break;
+                default:
+                    bgColor = new Color(0.2f, 0.6f, 1.0f, 1.0f);
+                    break;
+            }
+
+            GUI.backgroundColor = new Color(bgColor.r, bgColor.g, bgColor.b, 0.9f);
+            GUI.Box(notificationRect, "");
+            GUI.backgroundColor = Color.white;
+
+            GUIStyle notificationStyle = new GUIStyle(EditorStyles.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                padding = new RectOffset(10, 10, 10, 10),
+                wordWrap = true
+            };
+
+            GUI.Label(notificationRect, notification.Message, notificationStyle);
+        }
+    }
+
+    private void ShowNotification(string message, NotificationType type)
+    {
+        _notifications.Add(new Notification
+        {
+            Message = message,
+            Type = type,
+            TimeLeft = _notificationDisplayTime
+        });
+
+        Repaint();
+    }
+
     [System.Serializable]
     private class ChatResponse
     {
@@ -968,5 +1150,20 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         public string Timestamp { get; set; }
         public bool IsError { get; set; }
         public string OriginalMessage { get; set; }
+    }
+
+    private class Notification
+    {
+        public string Message { get; set; }
+        public NotificationType Type { get; set; }
+        public float TimeLeft { get; set; }
+    }
+
+    private enum NotificationType
+    {
+        Success,
+        Error,
+        Warning,
+        Info
     }
 }
