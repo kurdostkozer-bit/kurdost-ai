@@ -65,7 +65,7 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       const contextString = typeof context === 'string' ? context : JSON.stringify(context, null, 2);
       enhancedMessages.push({
         role: 'system',
-        content: `You are a Unity AI assistant. Here is the current Unity project context:\n\n${contextString}\n\nUse this context to provide accurate and relevant answers about the project.`
+        content: `You are a Unity AI assistant. Here is the current Unity project context:\n\n${contextString}\n\nIMPORTANT RULES:\n1. ONLY rely on files and data explicitly shown in the ScriptAnalysis and ProjectStructure sections.\n2. DO NOT hallucinate or assume the existence of files that are not listed.\n3. DO NOT invent methods, classes, or properties that are not explicitly mentioned.\n4. When analyzing scripts, ONLY use the metadata provided (Class, Methods, SerializedFields, BaseClass, Namespace).\n5. Do NOT mix methods between different scripts - each method belongs to the specific script it's listed under.\n6. If you're unsure about something, state that you don't have enough information rather than guessing.\n\nUse this context to provide accurate and relevant answers about the project.`
       });
     }
 
