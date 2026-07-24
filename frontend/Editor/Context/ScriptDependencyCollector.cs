@@ -61,6 +61,7 @@ namespace KurdostAI.Context
                         ReferencedFields = new List<string>(),
                         ReferencedMethods = new List<string>(),
                         ObjectCreations = new List<string>(),
+                        Attributes = new List<string>(),
                         DependsOn = new List<string>(),
                         ReferencedBy = new List<string>()
                     };
@@ -185,6 +186,17 @@ namespace KurdostAI.Context
                 "e", "event", "args", "context", "obj", "target", "source"
             };
 
+            var unityMethods = new HashSet<string>
+            {
+                "GetComponent", "GetComponentInChildren", "GetComponentInParent",
+                "GetComponents", "GetComponentsInChildren", "GetComponentsInParent",
+                "SendMessage", "BroadcastMessage", "Invoke", "InvokeRepeating",
+                "CancelInvoke", "StartCoroutine", "StopCoroutine", "StopAllCoroutines",
+                "Instantiate", "Destroy", "DestroyImmediate", "DontDestroyOnLoad",
+                "FindObjectOfType", "FindObjectsOfType", "FindGameObjectWithTag",
+                "FindGameObjectsWithTag", "Log", "LogError", "LogWarning"
+            };
+
             // Extract field types (public/private/protected fields)
             var fieldPattern = @"(public|private|protected|internal)\s+([A-Z]\w+)\s+\w+";
             var fieldMatches = Regex.Matches(content, fieldPattern);
@@ -229,7 +241,7 @@ namespace KurdostAI.Context
                 }
             }
 
-            // Extract field references (this.fieldName, fieldName)
+            // Extract field references (this.fieldName, fieldName) - lowercase identifiers
             var fieldRefPattern = @"(?<!\w)([a-z]\w+)(?=\s*[=;,\)])";
             var fieldRefMatches = Regex.Matches(content, fieldRefPattern);
             foreach (Match match in fieldRefMatches)
@@ -241,13 +253,13 @@ namespace KurdostAI.Context
                 }
             }
 
-            // Extract method calls (methodName())
+            // Extract method calls (methodName()) - exclude Unity methods
             var methodCallPattern = @"(?<!\w)([A-Z]\w+)\s*\(";
             var methodCallMatches = Regex.Matches(content, methodCallPattern);
             foreach (Match match in methodCallMatches)
             {
                 var method = match.Groups[1].Value;
-                if (!csharpKeywords.Contains(method) && !IsUnityType(method) && !IsCSharpPrimitive(method) && !attributeParams.Contains(method))
+                if (!csharpKeywords.Contains(method) && !IsUnityType(method) && !IsCSharpPrimitive(method) && !attributeParams.Contains(method) && !unityMethods.Contains(method))
                 {
                     dependency.ReferencedMethods.Add(method);
                 }
@@ -265,11 +277,24 @@ namespace KurdostAI.Context
                 }
             }
 
+            // Extract attributes (Header, Range, ContextMenu, etc.)
+            var attributePattern = @"\[(\w+)";
+            var attributeMatches = Regex.Matches(content, attributePattern);
+            foreach (Match match in attributeMatches)
+            {
+                var attribute = match.Groups[1].Value;
+                if (char.IsUpper(attribute[0])) // Attributes start with uppercase
+                {
+                    dependency.Attributes.Add(attribute);
+                }
+            }
+
             // Remove duplicates
             dependency.ReferencedTypes = dependency.ReferencedTypes.Distinct().ToList();
             dependency.ReferencedFields = dependency.ReferencedFields.Distinct().ToList();
             dependency.ReferencedMethods = dependency.ReferencedMethods.Distinct().ToList();
             dependency.ObjectCreations = dependency.ObjectCreations.Distinct().ToList();
+            dependency.Attributes = dependency.Attributes.Distinct().ToList();
         }
 
         /// <summary>
@@ -328,6 +353,7 @@ namespace KurdostAI.Context
         public List<string> ReferencedFields; // Field references
         public List<string> ReferencedMethods; // Method references
         public List<string> ObjectCreations; // Object creation (new keyword)
+        public List<string> Attributes; // Attribute names (Header, Range, ContextMenu, etc.)
         public List<string> DependsOn; // Scripts this script depends on
         public List<string> ReferencedBy; // Scripts that depend on this script
     }
