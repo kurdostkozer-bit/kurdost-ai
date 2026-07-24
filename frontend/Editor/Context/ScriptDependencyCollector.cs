@@ -57,10 +57,15 @@ namespace KurdostAI.Context
                         ScriptPath = relativePath,
                         UsingStatements = ExtractUsingStatements(cleanedContent),
                         BaseClass = ExtractBaseClass(cleanedContent),
-                        ReferencedTypes = ExtractReferencedTypes(cleanedContent),
+                        ReferencedTypes = new List<string>(),
+                        ReferencedFields = new List<string>(),
+                        ReferencedMethods = new List<string>(),
+                        ObjectCreations = new List<string>(),
                         DependsOn = new List<string>(),
                         ReferencedBy = new List<string>()
                     };
+
+                    ExtractReferences(cleanedContent, dependency);
 
                     allDependencies[fileName] = dependency;
                     data.Dependencies.Add(dependency);
@@ -154,14 +159,10 @@ namespace KurdostAI.Context
         }
 
         /// <summary>
-        /// Extract referenced types from field declarations and method signatures.
-        /// Filters out C# keywords and local variables.
+        /// Extract all references from script content and separate them by type.
         /// </summary>
-        private List<string> ExtractReferencedTypes(string content)
+        private void ExtractReferences(string content, ScriptDependency dependency)
         {
-            var referencedTypes = new List<string>();
-
-            // C# keywords to filter out
             var csharpKeywords = new HashSet<string>
             {
                 "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char",
@@ -176,7 +177,6 @@ namespace KurdostAI.Context
                 "unsafe", "ushort", "using", "var", "virtual", "void", "volatile", "while"
             };
 
-            // Common attribute parameter names to filter out
             var attributeParams = new HashSet<string>
             {
                 "fileName", "menuName", "order", "subfolder", "icon", "helpURL",
@@ -193,7 +193,7 @@ namespace KurdostAI.Context
                 var type = match.Groups[2].Value;
                 if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                 {
-                    referencedTypes.Add(type);
+                    dependency.ReferencedTypes.Add(type);
                 }
             }
 
@@ -211,7 +211,7 @@ namespace KurdostAI.Context
                         var type = parts[0];
                         if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                         {
-                            referencedTypes.Add(type);
+                            dependency.ReferencedTypes.Add(type);
                         }
                     }
                 }
@@ -225,11 +225,51 @@ namespace KurdostAI.Context
                 var type = match.Groups[1].Value;
                 if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                 {
-                    referencedTypes.Add(type);
+                    dependency.ReferencedTypes.Add(type);
                 }
             }
 
-            return referencedTypes.Distinct().ToList();
+            // Extract field references (this.fieldName, fieldName)
+            var fieldRefPattern = @"(?<!\w)([a-z]\w+)(?=\s*[=;,\)])";
+            var fieldRefMatches = Regex.Matches(content, fieldRefPattern);
+            foreach (Match match in fieldRefMatches)
+            {
+                var field = match.Groups[1].Value;
+                if (!csharpKeywords.Contains(field) && !attributeParams.Contains(field))
+                {
+                    dependency.ReferencedFields.Add(field);
+                }
+            }
+
+            // Extract method calls (methodName())
+            var methodCallPattern = @"(?<!\w)([A-Z]\w+)\s*\(";
+            var methodCallMatches = Regex.Matches(content, methodCallPattern);
+            foreach (Match match in methodCallMatches)
+            {
+                var method = match.Groups[1].Value;
+                if (!csharpKeywords.Contains(method) && !IsUnityType(method) && !IsCSharpPrimitive(method) && !attributeParams.Contains(method))
+                {
+                    dependency.ReferencedMethods.Add(method);
+                }
+            }
+
+            // Extract object creation (new Type())
+            var objectCreationPattern = @"new\s+([A-Z]\w+)";
+            var objectCreationMatches = Regex.Matches(content, objectCreationPattern);
+            foreach (Match match in objectCreationMatches)
+            {
+                var type = match.Groups[1].Value;
+                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
+                {
+                    dependency.ObjectCreations.Add(type);
+                }
+            }
+
+            // Remove duplicates
+            dependency.ReferencedTypes = dependency.ReferencedTypes.Distinct().ToList();
+            dependency.ReferencedFields = dependency.ReferencedFields.Distinct().ToList();
+            dependency.ReferencedMethods = dependency.ReferencedMethods.Distinct().ToList();
+            dependency.ObjectCreations = dependency.ObjectCreations.Distinct().ToList();
         }
 
         /// <summary>
@@ -284,7 +324,10 @@ namespace KurdostAI.Context
         public string ScriptPath;
         public List<string> UsingStatements;
         public string BaseClass;
-        public List<string> ReferencedTypes;
+        public List<string> ReferencedTypes; // Only actual type references (classes, interfaces)
+        public List<string> ReferencedFields; // Field references
+        public List<string> ReferencedMethods; // Method references
+        public List<string> ObjectCreations; // Object creation (new keyword)
         public List<string> DependsOn; // Scripts this script depends on
         public List<string> ReferencedBy; // Scripts that depend on this script
     }
