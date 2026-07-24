@@ -23,7 +23,7 @@ namespace KurdostAI.Context
         /// <summary>
         /// Collect dependency information for all C# scripts in the project.
         /// </summary>
-        public ScriptDependencyData Collect(int maxScripts = 3)
+        public ScriptDependencyData Collect(int maxScripts = 15)
         {
             var data = new ScriptDependencyData
             {

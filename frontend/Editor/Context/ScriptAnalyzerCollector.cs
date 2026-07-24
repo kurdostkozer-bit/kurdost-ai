@@ -24,7 +24,7 @@ namespace KurdostAI.Context
         /// <summary>
         /// Analyze all C# scripts in the project.
         /// </summary>
-        public ScriptAnalysisData Collect(int maxScripts = 3)
+        public ScriptAnalysisData Collect(int maxScripts = 15)
         {
             var data = new ScriptAnalysisData
             {
