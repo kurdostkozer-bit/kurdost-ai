@@ -17,6 +17,7 @@ namespace KurdostAI.Context
         private readonly HierarchyContextCollector _hierarchyCollector;
         private readonly ScriptAnalyzerCollector _scriptAnalyzerCollector;
         private readonly AssetTypeCollector _assetTypeCollector;
+        private readonly ScriptDependencyCollector _scriptDependencyCollector;
 
         public ContextBuilder()
         {
@@ -30,6 +31,7 @@ namespace KurdostAI.Context
             _hierarchyCollector = new HierarchyContextCollector();
             _scriptAnalyzerCollector = new ScriptAnalyzerCollector();
             _assetTypeCollector = new AssetTypeCollector();
+            _scriptDependencyCollector = new ScriptDependencyCollector();
         }
 
         /// <summary>
@@ -151,7 +153,8 @@ namespace KurdostAI.Context
                 Console = _consoleCollector.Collect(),
                 // ProjectStructure = _structureCollector.Collect(), // Removed to reduce context size (too heavy)
                 ScriptAnalysis = _scriptAnalyzerCollector.Collect(),
-                AssetTypes = _assetTypeCollector.Collect()
+                AssetTypes = _assetTypeCollector.Collect(),
+                ScriptDependencies = _scriptDependencyCollector.Collect()
             };
 
             return context;
@@ -174,5 +177,6 @@ namespace KurdostAI.Context
         public HierarchyContextData Hierarchy;
         public ScriptAnalysisData ScriptAnalysis;
         public AssetTypeData AssetTypes;
+        public ScriptDependencyData ScriptDependencies;
     }
 }
