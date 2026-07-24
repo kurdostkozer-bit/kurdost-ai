@@ -18,6 +18,7 @@ namespace KurdostAI.Context
         private readonly ScriptAnalyzerCollector _scriptAnalyzerCollector;
         private readonly AssetTypeCollector _assetTypeCollector;
         private readonly ScriptDependencyCollector _scriptDependencyCollector;
+        private readonly KnowledgeLayer _knowledgeLayer;
 
         public ContextBuilder()
         {
@@ -32,6 +33,7 @@ namespace KurdostAI.Context
             _scriptAnalyzerCollector = new ScriptAnalyzerCollector();
             _assetTypeCollector = new AssetTypeCollector();
             _scriptDependencyCollector = new ScriptDependencyCollector();
+            _knowledgeLayer = new KnowledgeLayer();
         }
 
         /// <summary>
@@ -154,7 +156,16 @@ namespace KurdostAI.Context
                 ProjectStructure = _structureCollector.Collect(maxDepth: 2), // Limited depth to reduce context size
                 ScriptAnalysis = _scriptAnalyzerCollector.Collect(),
                 AssetTypes = _assetTypeCollector.Collect(),
-                ScriptDependencies = _scriptDependencyCollector.Collect()
+                ScriptDependencies = _scriptDependencyCollector.Collect(),
+                ArchitecturalSummary = _knowledgeLayer.BuildSummary(new UnityEditorContext
+                {
+                    Project = _projectCollector.Collect(),
+                    ProjectSettings = _projectSettingsCollector.Collect(),
+                    ProjectStructure = _structureCollector.Collect(maxDepth: 2),
+                    ScriptAnalysis = _scriptAnalyzerCollector.Collect(),
+                    AssetTypes = _assetTypeCollector.Collect(),
+                    ScriptDependencies = _scriptDependencyCollector.Collect()
+                })
             };
 
             return context;
@@ -178,5 +189,6 @@ namespace KurdostAI.Context
         public ScriptAnalysisData ScriptAnalysis;
         public AssetTypeData AssetTypes;
         public ScriptDependencyData ScriptDependencies;
+        public ArchitecturalSummary ArchitecturalSummary;
     }
 }
