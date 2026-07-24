@@ -27,6 +27,7 @@ public class KurdostAIMainWindow : EditorWindow
     private float _notificationDisplayTime = 3f;
     private float _notificationTimer = 0f;
     private IntentDetector _intentDetector = new IntentDetector();
+    private PromptBuilder _promptBuilder = new PromptBuilder();
 
     // Colors - Modern Glassmorphism Theme (Morpheusm) - Enhanced
     private Color GRADIENT_START;
@@ -773,6 +774,10 @@ public class KurdostAIMainWindow : EditorWindow
         // Collect Unity Editor context
         string contextJson = CollectEditorContext(message);
 
+        // Build intent-specific prompts
+        string systemPrompt = _promptBuilder.BuildSystemPrompt(intentResult.Intent, intentResult, contextJson);
+        string enhancedUserMessage = _promptBuilder.BuildUserPrompt(message, intentResult.Intent, intentResult);
+
         // Use proper JSON serialization to handle Arabic text correctly
         ChatRequest chatRequest = new ChatRequest
         {
@@ -781,8 +786,13 @@ public class KurdostAIMainWindow : EditorWindow
             {
                 new ChatRequestMessage 
                 {
+                    role = "system",
+                    content = systemPrompt
+                },
+                new ChatRequestMessage 
+                {
                     role = "user",
-                    content = message
+                    content = enhancedUserMessage
                 }
             },
             model = model,
