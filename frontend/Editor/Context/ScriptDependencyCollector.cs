@@ -176,13 +176,22 @@ namespace KurdostAI.Context
                 "unsafe", "ushort", "using", "var", "virtual", "void", "volatile", "while"
             };
 
+            // Common attribute parameter names to filter out
+            var attributeParams = new HashSet<string>
+            {
+                "fileName", "menuName", "order", "subfolder", "icon", "helpURL",
+                "color", "headerImage", "headerText", "headerTextHeight",
+                "min", "max", "step", "tooltip", "radius", "angle", "number",
+                "e", "event", "args", "context", "obj", "target", "source"
+            };
+
             // Extract field types (public/private/protected fields)
             var fieldPattern = @"(public|private|protected|internal)\s+([A-Z]\w+)\s+\w+";
             var fieldMatches = Regex.Matches(content, fieldPattern);
             foreach (Match match in fieldMatches)
             {
                 var type = match.Groups[2].Value;
-                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
+                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                 {
                     referencedTypes.Add(type);
                 }
@@ -200,7 +209,7 @@ namespace KurdostAI.Context
                     if (parts.Length >= 2)
                     {
                         var type = parts[0];
-                        if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
+                        if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                         {
                             referencedTypes.Add(type);
                         }
@@ -214,7 +223,7 @@ namespace KurdostAI.Context
             foreach (Match match in genericMatches)
             {
                 var type = match.Groups[1].Value;
-                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
+                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type) && !attributeParams.Contains(type))
                 {
                     referencedTypes.Add(type);
                 }
