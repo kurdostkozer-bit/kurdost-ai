@@ -4,7 +4,7 @@ export { GeminiProvider, type GeminiConfig } from './gemini';
 export type Provider = 'groq' | 'gemini';
 
 export interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 

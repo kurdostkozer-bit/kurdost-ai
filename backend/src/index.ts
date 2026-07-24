@@ -44,10 +44,10 @@ app.get('/providers', (req: Request, res: Response) => {
 
 app.post('/api/v1/chat', async (req: Request, res: Response) => {
   try {
-    const { provider, messages, model, temperature, max_tokens } = req.body;
+    const { provider, messages, model, temperature, max_tokens, context } = req.body;
     const apiKey = req.headers['x-api-key'] as string;
 
-    console.log('📥 Request received:', { provider, messagesCount: messages?.length, model, temperature, max_tokens, hasApiKey: !!apiKey });
+    console.log('📥 Request received:', { provider, messagesCount: messages?.length, model, temperature, max_tokens, hasApiKey: !!apiKey, hasContext: !!context });
 
     if (!provider) {
       return res.status(400).json({ error: 'Provider is required' });
@@ -57,12 +57,27 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Messages array is required' });
     }
 
+    // Build messages array with context as system message
+    const enhancedMessages: Message[] = [];
+
+    // Add context as system message if provided
+    if (context) {
+      const contextString = typeof context === 'string' ? context : JSON.stringify(context, null, 2);
+      enhancedMessages.push({
+        role: 'system',
+        content: `You are a Unity AI assistant. Here is the current Unity project context:\n\n${contextString}\n\nUse this context to provide accurate and relevant answers about the project.`
+      });
+    }
+
+    // Add user messages
+    enhancedMessages.push(...messages);
+
     // Use API key from header if provided, otherwise use environment variable
     let effectiveApiKey = apiKey;
     if (!effectiveApiKey && provider === 'groq') {
-      effectiveApiKey = process.env.GROQ_API_KEY;
+      effectiveApiKey = process.env.GROQ_API_KEY || '';
     } else if (!effectiveApiKey && provider === 'gemini') {
-      effectiveApiKey = process.env.GEMINI_API_KEY;
+      effectiveApiKey = process.env.GEMINI_API_KEY || '';
     }
 
     if (!effectiveApiKey) {
@@ -89,9 +104,9 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Unknown provider: ${provider}` });
     }
 
-    console.log(`📝 Chat request: provider=${provider}, messages=${messages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}`);
+    console.log(`📝 Chat request: provider=${provider}, messages=${enhancedMessages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}`);
 
-    const response = await tempToolkit.sendMessage(provider, messages);
+    const response = await tempToolkit.sendMessage(provider, enhancedMessages);
 
     res.json({
       success: true,
