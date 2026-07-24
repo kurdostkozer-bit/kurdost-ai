@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine.Networking;
 using System.Collections;
 using System;
+using KurdostAI.Context;
 
 public class KurdostAIMainWindow : EditorWindow
 {
@@ -25,6 +26,7 @@ public class KurdostAIMainWindow : EditorWindow
     private List<Notification> _notifications = new List<Notification>();
     private float _notificationDisplayTime = 3f;
     private float _notificationTimer = 0f;
+    private IntentDetector _intentDetector = new IntentDetector();
 
     // Colors - Modern Glassmorphism Theme (Morpheusm) - Enhanced
     private Color GRADIENT_START;
@@ -699,6 +701,10 @@ public class KurdostAIMainWindow : EditorWindow
         string userMsg = message;
         _userMessage = "";
 
+        // Detect user intent
+        var intentResult = _intentDetector.DetectIntent(userMsg);
+        Debug.Log($"[KurdostAI] Intent: {intentResult.Intent}, Confidence: {intentResult.Confidence:F2}");
+
         _chatHistory.Add(new ChatMessage { Content = "Loading...", IsUser = false, Timestamp = System.DateTime.Now.ToString("HH:mm:ss"), OriginalMessage = userMsg });
 
         _isLoading = true;
@@ -711,7 +717,7 @@ public class KurdostAIMainWindow : EditorWindow
 
         Repaint();
 
-        SendToBackendCoroutine(userMsg);
+        SendToBackendCoroutine(userMsg, intentResult);
     }
 
     private void HandleCommand(string command)
@@ -743,13 +749,13 @@ public class KurdostAIMainWindow : EditorWindow
         }
     }
 
-    private void SendToBackendCoroutine(string message)
+    private void SendToBackendCoroutine(string message, IntentDetectionResult intentResult)
     {
-        SendToBackend(message);
+        SendToBackend(message, intentResult);
         EditorApplication.update += UpdateBackendRequest;
     }
 
-    private void SendToBackend(string message)
+    private void SendToBackend(string message, IntentDetectionResult intentResult)
     {
         string apiUrl = EditorPrefs.GetString("KurdostAI_ServerUrl", "https://kurdost-ai-backend.onrender.com/api/v1/chat");
         string apiKey = EditorPrefs.GetString("KurdostAI_ApiKey", "");
@@ -763,6 +769,9 @@ public class KurdostAIMainWindow : EditorWindow
             UpdateAIResponse("Error: No API Key provided", isError: true);
             return;
         }
+
+        // Collect Unity Editor context
+        string contextJson = CollectEditorContext(message);
 
         // Use proper JSON serialization to handle Arabic text correctly
         ChatRequest chatRequest = new ChatRequest
@@ -778,7 +787,10 @@ public class KurdostAIMainWindow : EditorWindow
             },
             model = model,
             temperature = temperature,
-            max_tokens = maxTokens
+            max_tokens = maxTokens,
+            context = contextJson,
+            intent = intentResult.Intent.ToString(),
+            intent_confidence = intentResult.Confidence
         };
 
         string jsonBody = JsonUtility.ToJson(chatRequest);
@@ -797,6 +809,58 @@ public class KurdostAIMainWindow : EditorWindow
         _requestStartTime = System.DateTime.Now;
 
         Debug.Log($"[KurdostAI] Request sent to {apiUrl}");
+    }
+
+    private string CollectEditorContext(string userMessage)
+    {
+        try
+        {
+            var contextBuilder = new KurdostAI.Context.ContextBuilder();
+            
+            // Determine what context to collect based on user message
+            KurdostAI.Context.UnityEditorContext context;
+            
+            string lowerMessage = userMessage.ToLower();
+            
+            if (lowerMessage.Contains("error") || lowerMessage.Contains("fix") || lowerMessage.Contains("debug"))
+            {
+                // Error-focused context
+                context = contextBuilder.BuildErrorFocused();
+            }
+            else if (lowerMessage.Contains("select") || Selection.activeObject != null)
+            {
+                // Selection-focused context
+                context = contextBuilder.BuildSelectionFocused();
+            }
+            else if (lowerMessage.Contains("create") || lowerMessage.Contains("file") || lowerMessage.Contains("folder") || lowerMessage.Contains("directory") || lowerMessage.Contains("mkdir") || lowerMessage.Contains("generate") || lowerMessage.Contains("script"))
+            {
+                // Structure-focused context for file operations
+                context = contextBuilder.BuildStructureFocused();
+            }
+            else if (lowerMessage.Contains("project") || lowerMessage.Contains("scene"))
+            {
+                // Full context with structure
+                context = contextBuilder.Build(includeConsoleErrors: true, includeSelection: true, includeProjectStructure: true);
+            }
+            else if (lowerMessage.Contains("script") || lowerMessage.Contains("analyze") || lowerMessage.Contains("examine") || lowerMessage.Contains("check") || lowerMessage.Contains("سكربت") || lowerMessage.Contains("كود") || lowerMessage.Contains("ملفات"))
+            {
+                // Script analysis is now always included in BuildEnvironmentAwareness
+                context = contextBuilder.BuildEnvironmentAwareness();
+            }
+            else
+            {
+                // Environment awareness context for general queries (Phase 1)
+                context = contextBuilder.BuildEnvironmentAwareness();
+            }
+
+            // Serialize to JSON
+            return KurdostAI.Context.ContextSerializer.SerializeCompact(context);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[KurdostAI] Failed to collect context: {ex.Message}");
+            return "{}";
+        }
     }
 
     private void UpdateBackendRequest()
@@ -1556,6 +1620,9 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         public string model;
         public float temperature;
         public int max_tokens;
+        public string context; // Unity Editor context as JSON
+        public string intent; // User intent (Analysis, Edit, Create, ErrorCheck, etc.)
+        public float intent_confidence; // Confidence score for intent detection
     }
 
     [System.Serializable]
@@ -1565,7 +1632,7 @@ true, Timestamp = System.DateTime.Now.ToString("HH:mm:ss") });
         public string content;
     }
 
-    private class ChatMessage
+    public class ChatMessage
     {
         public string Content { get; set; }
         public bool IsUser { get; set; }
