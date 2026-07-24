@@ -60,7 +60,8 @@ namespace KurdostAI.Context
                     switch (extension)
                     {
                         case ".cs":
-                            if (data.Scripts.Count < maxFilesPerCategory) data.Scripts.Add(assetInfo);
+                            // No limit for scripts to ensure consistency with ProjectStructure
+                            data.Scripts.Add(assetInfo);
                             break;
                         case ".unity":
                             if (data.Scenes.Count < maxFilesPerCategory) data.Scenes.Add(assetInfo);
