@@ -45,15 +45,19 @@ namespace KurdostAI.Context
                 {
                     var relativePath = file.Substring(_projectPath.Length + 1).Replace("\\", "/");
                     var content = File.ReadAllText(file);
+                    
+                    // Remove string literals and comments before analysis
+                    var cleanedContent = RemoveStringLiteralsAndComments(content);
+                    
                     var fileName = Path.GetFileNameWithoutExtension(file);
 
                     var dependency = new ScriptDependency
                     {
                         ScriptName = fileName,
                         ScriptPath = relativePath,
-                        UsingStatements = ExtractUsingStatements(content),
-                        BaseClass = ExtractBaseClass(content),
-                        ReferencedTypes = ExtractReferencedTypes(content),
+                        UsingStatements = ExtractUsingStatements(cleanedContent),
+                        BaseClass = ExtractBaseClass(cleanedContent),
+                        ReferencedTypes = ExtractReferencedTypes(cleanedContent),
                         DependsOn = new List<string>(),
                         ReferencedBy = new List<string>()
                     };
@@ -99,6 +103,29 @@ namespace KurdostAI.Context
             }
 
             return data;
+        }
+
+        /// <summary>
+        /// Remove string literals and comments from code to avoid false positives.
+        /// </summary>
+        private string RemoveStringLiteralsAndComments(string content)
+        {
+            // Remove multi-line comments /* ... */
+            content = Regex.Replace(content, @"/\*[\s\S]*?\*/", "");
+            
+            // Remove single-line comments // ...
+            content = Regex.Replace(content, @"//.*$", "", RegexOptions.Multiline);
+            
+            // Remove regular string literals "..."
+            content = Regex.Replace(content, @"""[^""\\]*(?:\\.[^""\\]*)*""", "");
+            
+            // Remove interpolated strings $"..."
+            content = Regex.Replace(content, @"\$""[^""\\]*(?:\\.[^""\\]*)*""", "");
+            
+            // Remove character literals '...'
+            content = Regex.Replace(content, @"'[^']'", "");
+            
+            return content;
         }
 
         /// <summary>

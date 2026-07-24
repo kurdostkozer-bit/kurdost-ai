@@ -151,7 +151,7 @@ namespace KurdostAI.Context
                 ProjectSettings = _projectSettingsCollector.Collect(),
                 Hierarchy = _hierarchyCollector.Collect(),
                 Console = _consoleCollector.Collect(),
-                // ProjectStructure = _structureCollector.Collect(), // Removed to reduce context size (too heavy)
+                ProjectStructure = _structureCollector.Collect(maxDepth: 2), // Limited depth to reduce context size
                 ScriptAnalysis = _scriptAnalyzerCollector.Collect(),
                 AssetTypes = _assetTypeCollector.Collect(),
                 ScriptDependencies = _scriptDependencyCollector.Collect()
