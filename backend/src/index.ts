@@ -57,11 +57,14 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Messages array is required' });
     }
 
+    console.log('📝 Stage 1: Building messages array...');
+
     // Build messages array with context as system message
     const enhancedMessages: Message[] = [];
 
     // Add context as system message if provided
     if (context) {
+      console.log('📝 Stage 2: Processing context...');
       const contextString = typeof context === 'string' ? context : JSON.stringify(context, null, 2);
       const contextSize = Buffer.byteLength(contextString, 'utf8');
       console.log(`📊 Context size: ${contextSize} bytes (${(contextSize / 1024).toFixed(2)} KB)`);
@@ -82,6 +85,8 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
 
     // Add user messages
     enhancedMessages.push(...messages);
+
+    console.log(`📝 Stage 3: Messages built. Total messages: ${enhancedMessages.length}`);
 
     // Use API key from header if provided, otherwise use environment variable
     let effectiveApiKey = apiKey;
@@ -116,8 +121,11 @@ app.post('/api/v1/chat', async (req: Request, res: Response) => {
     }
 
     console.log(`📝 Chat request: provider=${provider}, messages=${enhancedMessages.length}, model=${model}, temperature=${temperature}, max_tokens=${max_tokens}`);
+    console.log('📝 Stage 4: Sending to AI provider...');
 
     const response = await tempToolkit.sendMessage(provider, enhancedMessages);
+
+    console.log('✅ Stage 5: AI provider responded successfully');
 
     res.json({
       success: true,
