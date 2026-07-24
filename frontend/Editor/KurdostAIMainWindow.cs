@@ -28,6 +28,7 @@ public class KurdostAIMainWindow : EditorWindow
     private float _notificationTimer = 0f;
     private IntentDetector _intentDetector = new IntentDetector();
     private PromptBuilder _promptBuilder = new PromptBuilder();
+    private ContextOptimizer _contextOptimizer = new ContextOptimizer();
 
     // Colors - Modern Glassmorphism Theme (Morpheusm) - Enhanced
     private Color GRADIENT_START;
@@ -774,8 +775,13 @@ public class KurdostAIMainWindow : EditorWindow
         // Collect Unity Editor context
         string contextJson = CollectEditorContext(message);
 
+        // Optimize context based on intent
+        var fullContext = ParseContextJson(contextJson);
+        var optimizedContext = _contextOptimizer.OptimizeContext(fullContext, intentResult.Intent, intentResult);
+        string optimizedContextJson = JsonUtility.ToJson(optimizedContext);
+
         // Build intent-specific prompts
-        string systemPrompt = _promptBuilder.BuildSystemPrompt(intentResult.Intent, intentResult, contextJson);
+        string systemPrompt = _promptBuilder.BuildSystemPrompt(intentResult.Intent, intentResult, optimizedContextJson);
         string enhancedUserMessage = _promptBuilder.BuildUserPrompt(message, intentResult.Intent, intentResult);
 
         // Use proper JSON serialization to handle Arabic text correctly
@@ -798,7 +804,7 @@ public class KurdostAIMainWindow : EditorWindow
             model = model,
             temperature = temperature,
             max_tokens = maxTokens,
-            context = contextJson,
+            context = optimizedContextJson,
             intent = intentResult.Intent.ToString(),
             intent_confidence = intentResult.Confidence
         };
@@ -819,6 +825,19 @@ public class KurdostAIMainWindow : EditorWindow
         _requestStartTime = System.DateTime.Now;
 
         Debug.Log($"[KurdostAI] Request sent to {apiUrl}");
+    }
+
+    private UnityEditorContext ParseContextJson(string contextJson)
+    {
+        try
+        {
+            return JsonUtility.FromJson<UnityEditorContext>(contextJson);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[KurdostAI] Failed to parse context JSON: {ex.Message}");
+            return new UnityEditorContext();
+        }
     }
 
     private string CollectEditorContext(string userMessage)
