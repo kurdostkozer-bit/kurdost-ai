@@ -36,6 +36,9 @@ namespace KurdostAI.Context
             // Limit to maxScripts to avoid overwhelming the context
             var filesToAnalyze = csFiles.Take(maxScripts).ToList();
 
+            // First pass: collect all dependencies
+            var allDependencies = new Dictionary<string, ScriptDependency>();
+            
             foreach (var file in filesToAnalyze)
             {
                 try
@@ -50,14 +53,48 @@ namespace KurdostAI.Context
                         ScriptPath = relativePath,
                         UsingStatements = ExtractUsingStatements(content),
                         BaseClass = ExtractBaseClass(content),
-                        ReferencedTypes = ExtractReferencedTypes(content)
+                        ReferencedTypes = ExtractReferencedTypes(content),
+                        DependsOn = new List<string>(),
+                        ReferencedBy = new List<string>()
                     };
 
+                    allDependencies[fileName] = dependency;
                     data.Dependencies.Add(dependency);
                 }
                 catch (Exception ex)
                 {
                     Debug.LogWarning($"[ScriptDependencyCollector] Failed to analyze {file}: {ex.Message}");
+                }
+            }
+
+            // Second pass: build dependency graph
+            foreach (var dependency in data.Dependencies)
+            {
+                // Find scripts that this script depends on
+                foreach (var refType in dependency.ReferencedTypes)
+                {
+                    if (allDependencies.ContainsKey(refType))
+                    {
+                        dependency.DependsOn.Add(refType);
+                    }
+                }
+
+                // Add base class as dependency
+                if (!string.IsNullOrEmpty(dependency.BaseClass) && allDependencies.ContainsKey(dependency.BaseClass))
+                {
+                    dependency.DependsOn.Add(dependency.BaseClass);
+                }
+            }
+
+            // Build ReferencedBy (reverse dependencies)
+            foreach (var dependency in data.Dependencies)
+            {
+                foreach (var depOn in dependency.DependsOn)
+                {
+                    if (allDependencies.ContainsKey(depOn))
+                    {
+                        allDependencies[depOn].ReferencedBy.Add(dependency.ScriptName);
+                    }
                 }
             }
 
@@ -91,18 +128,34 @@ namespace KurdostAI.Context
 
         /// <summary>
         /// Extract referenced types from field declarations and method signatures.
+        /// Filters out C# keywords and local variables.
         /// </summary>
         private List<string> ExtractReferencedTypes(string content)
         {
             var referencedTypes = new List<string>();
 
-            // Extract field types
-            var fieldPattern = @"public\s+(\w+)\s+\w+";
+            // C# keywords to filter out
+            var csharpKeywords = new HashSet<string>
+            {
+                "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char",
+                "checked", "class", "const", "continue", "decimal", "default", "delegate",
+                "do", "double", "else", "enum", "event", "explicit", "extern", "false",
+                "finally", "fixed", "float", "for", "foreach", "goto", "if", "implicit",
+                "in", "int", "interface", "internal", "is", "lock", "long", "namespace",
+                "new", "null", "object", "operator", "out", "override", "params", "private",
+                "protected", "public", "readonly", "ref", "return", "sbyte", "sealed",
+                "short", "sizeof", "stackalloc", "static", "string", "struct", "switch",
+                "this", "throw", "true", "try", "typeof", "uint", "ulong", "unchecked",
+                "unsafe", "ushort", "using", "var", "virtual", "void", "volatile", "while"
+            };
+
+            // Extract field types (public/private/protected fields)
+            var fieldPattern = @"(public|private|protected|internal)\s+([A-Z]\w+)\s+\w+";
             var fieldMatches = Regex.Matches(content, fieldPattern);
             foreach (Match match in fieldMatches)
             {
-                var type = match.Groups[1].Value;
-                if (!IsUnityType(type) && !IsCSharpPrimitive(type))
+                var type = match.Groups[2].Value;
+                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
                 {
                     referencedTypes.Add(type);
                 }
@@ -120,11 +173,23 @@ namespace KurdostAI.Context
                     if (parts.Length >= 2)
                     {
                         var type = parts[0];
-                        if (!IsUnityType(type) && !IsCSharpPrimitive(type))
+                        if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
                         {
                             referencedTypes.Add(type);
                         }
                     }
+                }
+            }
+
+            // Extract generic type parameters (List<T>, Dictionary<K,V>)
+            var genericPattern = @"([A-Z]\w+)<[^>]+>";
+            var genericMatches = Regex.Matches(content, genericPattern);
+            foreach (Match match in genericMatches)
+            {
+                var type = match.Groups[1].Value;
+                if (!csharpKeywords.Contains(type) && !IsUnityType(type) && !IsCSharpPrimitive(type))
+                {
+                    referencedTypes.Add(type);
                 }
             }
 
@@ -184,5 +249,7 @@ namespace KurdostAI.Context
         public List<string> UsingStatements;
         public string BaseClass;
         public List<string> ReferencedTypes;
+        public List<string> DependsOn; // Scripts this script depends on
+        public List<string> ReferencedBy; // Scripts that depend on this script
     }
 }
